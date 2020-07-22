@@ -297,8 +297,7 @@ static void mixcolumns_0(uint32_t* state) {
 
 /******************************************************************************
 * Computation of the MixColumns transformation in the fixsliced representation.
-* For fully-fixsliced implementations, it is used for rounds i s.t. (i%4) == 1.
-* For semi-fixsliced implementations, it is used for rounds i s.t. (i%2) == 1.
+* For fully-fixsliced implementations only, for round i s.t. (i%4) == 1.
 ******************************************************************************/
 static void mixcolumns_1(uint32_t* state) {
 	uint32_t tmp0, tmp1, tmp2;
@@ -420,7 +419,9 @@ static void mixcolumns_2(uint32_t* state) {
 
 /******************************************************************************
 * Computation of the MixColumns transformation in the fixsliced representation.
-* For fully-fixsliced implementations only, for rounds i s.t. (i%4) == 3.
+* For fully-fixsliced implementations, it is used for rounds i s.t. (i%4) == 3.
+* For semi-fixsliced implementations, it is used for rounds i s.t. (i%2) == 1.
+* Based on Käsper-Schwabe, similar to https://github.com/Ko-/aes-armcortexm.
 ******************************************************************************/
 static void mixcolumns_3(uint32_t* state) {
 	uint32_t tmp0, tmp1, tmp2;
