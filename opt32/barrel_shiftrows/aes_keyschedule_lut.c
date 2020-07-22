@@ -95,7 +95,7 @@ static void packing_rkey(uint32_t* rkey_bsr, const unsigned char* rkey) {
 	}
 }
 
-void aes128_keyschedule(uint32_t* rkeys_bsr, const unsigned char* key) {
+void aes128_keyschedule_lut(uint32_t* rkeys_bsr, const unsigned char* key) {
 	uint32_t rkeys[44];
 	// key schedule in the classical representation
 	rkeys[0] = LE_LOAD_32(key);
