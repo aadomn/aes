@@ -76,6 +76,11 @@ static void xor_columns(uint32_t* rkeys) {
 	}
 }
 
+/******************************************************************************
+* Fully bitsliced AES-128 key schedule to match the fully-fixsliced (ffs)
+* representation. Note that it is possible to pass two different keys as input
+* parameters if one wants to encrypt 2 blocks in with two different keys.
+******************************************************************************/
 void aes128_keyschedule_ffs(uint32_t* rkeys, const unsigned char* key0,
 						const unsigned char* key1) {
 	packing(rkeys, key0, key1); 	// packs the keys into the bitsliced state
@@ -140,6 +145,11 @@ void aes128_keyschedule_ffs(uint32_t* rkeys, const unsigned char* key0,
 	}
 }
 
+/******************************************************************************
+* Fully bitsliced AES-128 key schedule to match the semi-fixsliced (sfs)
+* representation. Note that it is possible to pass two different keys as input
+* parameters if one wants to encrypt 2 blocks in with two different keys.
+******************************************************************************/
 void aes128_keyschedule_sfs(uint32_t* rkeys, const unsigned char* key0,
 						const unsigned char* key1) {
 	packing(rkeys, key0, key1); 	// packs the keys into the bitsliced state
