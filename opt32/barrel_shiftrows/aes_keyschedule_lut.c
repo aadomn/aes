@@ -61,9 +61,7 @@ static unsigned char rcon[11] = {
 /******************************************************************************
 * Packing routine used to rearrange the rkeys to match the barrel-shiftrows.
 * It is about twice more efficient than the 'packing' func. This optimization
-* is possible because the 8 16-byte blocs to pack are all equal.
-* However, if one wants to encrypt 8 blocs in parallel with different keys, the
-* 'packing' function is necessary.
+* is possible because the 8 16-byte blocks to pack are all equal.
 ******************************************************************************/
 static void packing_rkey(uint32_t* rkey_bsr, const unsigned char* rkey) {
 	uint32_t tmp, tmp0, tmp1, tmp2, tmp3;
