@@ -97,20 +97,20 @@ unpacking:
     eor     r12, r7, r11, lsr #4    // SWAPMOVE(r11, r7, 0x0f0f0f0f, 4) ....
     and     r12, r3
     eor     r9, r7, r12
-    eor     r11, r11, r12, lsl #4     // .... SWAPMOVE(r11, r7, 0x0f0f0f0f, 4)
-    eor     r12, r6, r10, lsr #4     // SWAPMOVE(r10, r6, 0x0f0f0f0f, 4) ....
+    eor     r11, r11, r12, lsl #4   // .... SWAPMOVE(r11, r7, 0x0f0f0f0f, 4)
+    eor     r12, r6, r10, lsr #4    // SWAPMOVE(r10, r6, 0x0f0f0f0f, 4) ....
     and     r12, r3
     eor     r1, r6, r12
-    eor     r7, r10, r12, lsl #4     // .... SWAPMOVE(r10, r6, 0x0f0f0f0f, 4)
+    eor     r7, r10, r12, lsl #4    // .... SWAPMOVE(r10, r6, 0x0f0f0f0f, 4)
     eor     r12, r4, r8, lsr #4     // SWAPMOVE(r8, r4, 0x0f0f0f0f, 4) ....
     and     r12, r3
     eor     r4, r12
     eor     r8, r8, r12, lsl #4     // .... SWAPMOVE(r8, r4, 0x0f0f0f0f,4)
     eor     r3, r3, r3, lsl #2      // r3 <- 0x33333333 (mask for SWAPMOVE)
-    eor     r12, r2, r11, lsr #2     // SWAPMOVE(r11, r2, 0x33333333, 2) ....
+    eor     r12, r2, r11, lsr #2    // SWAPMOVE(r11, r2, 0x33333333, 2) ....
     and     r12, r3
     eor     r10, r2, r12
-    eor     r11, r11, r12, lsl #2     // .... SWAPMOVE(r11, r2, 0x33333333, 2)
+    eor     r11, r11, r12, lsl #2   // .... SWAPMOVE(r11, r2, 0x33333333, 2)
     eor     r12, r8, r7, lsr #2     // SWAPMOVE(r7, r8, 0x33333333, 2) ....
     and     r12, r3
     eor     r6, r8, r12
@@ -132,14 +132,14 @@ unpacking:
     and     r12, r1
     eor     r5, r12
     eor     r9, r9, r12, lsl #1     // .... SWAPMOVE(r9, r5, 0x55555555, 1)
-    eor     r12, r6, r10, lsr #1     // SWAPMOVE(r10, r6, 0x55555555, 1) ....
+    eor     r12, r6, r10, lsr #1    // SWAPMOVE(r10, r6, 0x55555555, 1) ....
     and     r12, r1
     eor     r6, r12
-    eor     r10, r10, r12, lsl #1     // .... SWAPMOVE(r10, r6, 0x55555555, 1)
-    eor     r12, r7, r11, lsr #1     // SWAPMOVE(r11, r7, 0x55555555, 1) ....
+    eor     r10, r10, r12, lsl #1   // .... SWAPMOVE(r10, r6, 0x55555555, 1)
+    eor     r12, r7, r11, lsr #1    // SWAPMOVE(r11, r7, 0x55555555, 1) ....
     and     r12, r1
     eor     r7, r12
-    eor     r11, r11, r12, lsl #1     // .... SWAPMOVE(r11, r7, 0x55555555, 1)
+    eor     r11, r11, r12, lsl #1   // .... SWAPMOVE(r11, r7, 0x55555555, 1)
     bx      lr
 
 /******************************************************************************
