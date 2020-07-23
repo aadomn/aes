@@ -95,6 +95,11 @@ static void packing_rkey(uint32_t* rkey_bsr, const unsigned char* rkey) {
 	}
 }
 
+/******************************************************************************
+* Pre-computes all the AES-128 round keys according to the barrel-shiftrows 
+* representation. Note that additional NOTs are incorporated to speed up SBox
+* calculations in the encryption function.
+******************************************************************************/
 void aes128_keyschedule_lut(uint32_t* rkeys_bsr, const unsigned char* key) {
 	uint32_t rkeys[44];
 	// key schedule in the classical representation

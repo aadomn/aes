@@ -8,5 +8,4 @@ void aes128_encrypt(unsigned char* ctext, const unsigned char* ptext,
 
 void aes128_keyschedule_lut(uint32_t* rkeys, const unsigned char* key);
 
-
 #endif 	// AES_H_
