@@ -1,5 +1,5 @@
 /******************************************************************************
-* ARM assembly implemetnations of the AES-128 key schedule to match fixslicing.
+* ARM assembly implementations of the AES-128 key schedule to match fixslicing.
 * Note that those implementations are fully bitsliced and do not rely on any
 * Look-Up Table (LUT).
 *
