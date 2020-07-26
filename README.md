@@ -1,6 +1,6 @@
 # Fast constant-time AES implementations on 32-bit architectures
 
-This repository contains efficient constant-time implementations for the Advanced Encryption Standard (AES) algorithm as supplementary material for the paper [Fixslicing AES-like Ciphers - New bitsliced AES speed records on ARM Cortex-M and RISC-V](https://eprint.iacr.org/2020) pulished at 
+This repository contains efficient constant-time implementations for the Advanced Encryption Standard (AES) algorithm as supplementary material for the paper [Fixslicing AES-like Ciphers - New bitsliced AES speed records on ARM Cortex-M and RISC-V](https://eprint.iacr.org/2020) published at 
 
 The repository structure is as follows:
 ```
