@@ -21,7 +21,7 @@ aes
 │   └───barrel_shiftrows
 │   └───fixslicing
 ```
-where `armcortexm` and `riscv` directories respectively refer to assembly implementations for ARM Cortex-M and RV32I, whereas `opt32` refer to C language implementations. Note that the main goal of the `opt32` directory is to provide cross-platform implementations and to serve an educational purpose. Therefore if you intend to run it for benchmarking, you should consider some modifications regarding execution speed.
+where `armcortexm` and `riscv` directories respectively refer to assembly implementations for ARM Cortex-M and RV32I, whereas `opt32` refer to C language implementations. Note that the main goal of the `opt32` directory is to provide cross-platform implementations and to serve a didactic purpose. Therefore if you intend to run it for benchmarking, you should consider some modifications regarding execution speed.
 
 Each of those directories include two different AES representations:
 - `barrel_shiftrows`: 8 blocks are processed in parallel.
