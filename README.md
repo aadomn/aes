@@ -34,7 +34,7 @@ Each directory includes two different AES representations:
 
 - `fixslicing`
 
-   Processes of 2 blocks in parallel. Requires 352 and 480 bytes to store all the round keys for AES-128 and AES-256, respectively.
+   Processes 2 blocks in parallel. Requires 352 and 480 bytes to store all the round keys for AES-128 and AES-256, respectively.
    Two fixsliced versions are proposed:
    * `Fully-fixsliced`: faster but at the cost of a larger code size
    * `Semi-fixsliced`: slightly slower but more compact.
