@@ -61,4 +61,4 @@ A first-order masked implementation based on fixslicing can be found in `armcort
 | 1st-order masked AES-128 semi-fixsliced   | 2               | 200.7         |
 | 1st-order masked AES-128 fully-fixsliced         | 2               | 196           |
 
-:warning::rotating_light: This masking scheme was mainly introduced to achieve first-order masking while limiting the amount of randomness to generate. Please be aware that other first-order masking schemes should provide a better security level. Note that no practical evaluation has been undertaken to assess the security of our masked implementations! :rotating_light::warning: 
+:warning::rotating_light: This masking scheme was mainly introduced to achieve first-order masking while limiting the amount of randomness to generate. Please be aware that other first-order masking schemes provide a better security level. Note that no practical evaluation has been undertaken to assess the security of our masked implementations! :rotating_light::warning: 
