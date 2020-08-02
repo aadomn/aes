@@ -1,13 +1,14 @@
 /******************************************************************************
-* C language implementations of the AES-128 key schedule to match the fixsliced
-* representation. Note that those implementations rely on Look-Up Tables (LUT).
+* C language implementations of the AES-128 and AES-256 key schedules to match
+* the fixsliced representation. Note that those implementations rely on Look-Up
+* Tables (LUT).
 *
 * See the paper available at https:// for more details.
 *
 * @author 	Alexandre Adomnicai, Nanyang Technological University, Singapore
 *			alexandre.adomnicai@ntu.edu.sg
 *
-* @date		July 2020
+* @date		August 2020
 ******************************************************************************/
 #include "aes.h"
 #include "internal-aes.h"
@@ -141,6 +142,108 @@ void aes128_keyschedule_ffs_lut(uint32_t* rkeys_ffs, const unsigned char* key){
 
 /******************************************************************************
 * Pre-computes all the round keys for a given encryption key, according to the
+* fully-fixsliced (ffs) representation.
+* Note that the round keys also include the NOTs omitted in the S-box. 
+******************************************************************************/
+void aes256_keyschedule_ffs_lut(uint32_t* rkeys_ffs, const unsigned char* key){
+	uint32_t t0, t1, t2, tmp;
+	uint32_t rkeys[60];
+	// key schedule in the classical representation
+	rkeys[0] = LE_LOAD_32(key);
+	rkeys[1] = LE_LOAD_32(key + 4);
+	rkeys[2] = LE_LOAD_32(key + 8);
+	rkeys[3] = LE_LOAD_32(key + 12);
+	rkeys[4] = LE_LOAD_32(key + 16);
+	rkeys[5] = LE_LOAD_32(key + 20);
+	rkeys[6] = LE_LOAD_32(key + 24);
+	rkeys[7] = LE_LOAD_32(key + 28);
+	for(int i = 8; i < 56; i+=8) {
+		rkeys[i] = rkeys[i-8] ^ rcon[i/8];
+		rkeys[i] ^= (sbox_lut[rkeys[i-1] & 0xff] << 24);
+		rkeys[i] ^= sbox_lut[(rkeys[i-1] >> 8) & 0xff];
+		rkeys[i] ^= (sbox_lut[rkeys[i-1] >> 24] << 16);
+		rkeys[i] ^= (sbox_lut[(rkeys[i-1] >> 16) & 0xff] << 8);
+		rkeys[i+1] = rkeys[i] ^ rkeys[i-7];
+		rkeys[i+2] = rkeys[i+1] ^ rkeys[i-6];
+		rkeys[i+3] = rkeys[i+2] ^ rkeys[i-5];
+		rkeys[i+4] = rkeys[i-4];
+		rkeys[i+4] ^= sbox_lut[rkeys[i+3] & 0xff];
+		rkeys[i+4] ^= sbox_lut[(rkeys[i+3] >> 8) & 0xff] << 8;
+		rkeys[i+4] ^= sbox_lut[(rkeys[i+3] >> 16) & 0xff] << 16;
+		rkeys[i+4] ^= sbox_lut[rkeys[i+3] >> 24] << 24;
+		rkeys[i+5] = rkeys[i+4] ^ rkeys[i-3];
+		rkeys[i+6] = rkeys[i+5] ^ rkeys[i-2];
+		rkeys[i+7] = rkeys[i+6] ^ rkeys[i-1];
+	}
+	rkeys[56] = rkeys[48] ^ rcon[7];
+	rkeys[56] ^= (sbox_lut[rkeys[55] & 0xff] << 24);
+	rkeys[56] ^= sbox_lut[(rkeys[55] >> 8) & 0xff];
+	rkeys[56] ^= (sbox_lut[rkeys[55] >> 24] << 16);
+	rkeys[56] ^= (sbox_lut[(rkeys[55] >> 16) & 0xff] << 8);
+	rkeys[57] = rkeys[56] ^ rkeys[49];
+	rkeys[58] = rkeys[57] ^ rkeys[50];
+	rkeys[59] = rkeys[58] ^ rkeys[51];
+	// applying ShiftRows^(-i) to match the fully-fixsliced representation
+	for(int i = 4; i < 56; i+=4) {
+		t0 = rkeys[i];
+		t1 = rkeys[i+1];
+		t2 = rkeys[i+2];
+		switch ((i/4) % 4) {
+			case 1: 					// Applies ShiftRows^(-1)
+				rkeys[i] 	&= 0x000000ff;
+				rkeys[i] 	|= rkeys[i+3] & 0x0000ff00;
+				rkeys[i] 	|= rkeys[i+2] & 0x00ff0000;
+				rkeys[i] 	|= rkeys[i+1] & 0xff000000;
+				rkeys[i+1] 	&= 0x000000ff;
+				rkeys[i+1] 	|= t0 & 0x0000ff00;
+				rkeys[i+1] 	|= rkeys[i+3] & 0x00ff0000;
+				rkeys[i+1] 	|= rkeys[i+2] & 0xff000000;
+				rkeys[i+2] 	&= 0x000000ff;
+				rkeys[i+2] 	|= t1 & 0x0000ff00;
+				rkeys[i+2] 	|= t0 & 0x00ff0000;
+				rkeys[i+2] 	|= rkeys[i+3] & 0xff000000;
+				rkeys[i+3] 	&= 0x000000ff;
+				rkeys[i+3] 	|= t2 & 0x0000ff00;
+				rkeys[i+3] 	|= t1 & 0x00ff0000;
+				rkeys[i+3] 	|= t0 & 0xff000000;
+				break;
+			case 2: 					// Applies ShiftRows^(-2)
+				SWAPMOVE(rkeys[i+2], rkeys[i], 0xff00ff00, 0);
+				SWAPMOVE(rkeys[i+3], rkeys[i+1], 0xff00ff00, 0);
+				break;
+			case 3: 					// Applies ShiftRows^(-3)
+				rkeys[i] 	&= 0x000000ff;
+				rkeys[i] 	|= rkeys[i+1] & 0x0000ff00;
+				rkeys[i] 	|= rkeys[i+2] & 0x00ff0000;
+				rkeys[i] 	|= rkeys[i+3] & 0xff000000;
+				rkeys[i+1] 	&= 0x000000ff;
+				rkeys[i+1] 	|= rkeys[i+3] & 0x00ff0000;
+				rkeys[i+1] 	|= rkeys[i+2] & 0x0000ff00;
+				rkeys[i+1] 	|= t0 & 0xff000000;
+				rkeys[i+2] 	&= 0x000000ff;
+				rkeys[i+2] 	|= rkeys[i+3] & 0x0000ff00;
+				rkeys[i+2] 	|= t0 & 0x00ff0000;
+				rkeys[i+2] 	|= t1 & 0xff000000;
+				rkeys[i+3] 	&= 0x000000ff;
+				rkeys[i+3] 	|= t0 & 0x0000ff00;
+				rkeys[i+3] 	|= t1 & 0x00ff0000;
+				rkeys[i+3] 	|= t2 & 0xff000000;
+				break;
+		}
+	}
+	// packing all round keys to match the fully-fixsliced representation
+	packing(rkeys_ffs, (unsigned char*)rkeys, (unsigned char*)rkeys);
+	for(int i = 1; i < 15; i++) {
+		packing(rkeys_ffs + i*8, (unsigned char*)(rkeys + i*4), (unsigned char*)(rkeys + i*4));
+		rkeys_ffs[i*8 + 1] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+		rkeys_ffs[i*8 + 2] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+		rkeys_ffs[i*8 + 6] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+		rkeys_ffs[i*8 + 7] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+	}
+}
+
+/******************************************************************************
+* Pre-computes all the round keys for a given encryption key, according to the
 * semi-fixsliced (sfs) representation.
 * Note that the round keys also include the NOTs omitted in the S-box. 
 ******************************************************************************/
@@ -184,9 +287,85 @@ void aes128_keyschedule_sfs_lut(uint32_t* rkeys_sfs, const unsigned char* key){
 		rkeys[i+3] 	|= t1 & 0x00ff0000;
 		rkeys[i+3] 	|= t0 & 0xff000000;
 	}
-	// packing all round keys to match the fully-fixsliced representation
+	// packing all round keys to match the semi-fixsliced representation
 	packing(rkeys_sfs, (unsigned char*)rkeys, (unsigned char*)rkeys);
 	for(int i = 1; i < 11; i++) {
+		packing(rkeys_sfs + i*8, (unsigned char*)(rkeys + i*4), (unsigned char*)(rkeys + i*4));
+		rkeys_sfs[i*8 + 1] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+		rkeys_sfs[i*8 + 2] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+		rkeys_sfs[i*8 + 6] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+		rkeys_sfs[i*8 + 7] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+	}
+}
+
+/******************************************************************************
+* Pre-computes all the round keys for a given encryption key, according to the
+* fully-fixsliced (ffs) representation.
+* Note that the round keys also include the NOTs omitted in the S-box. 
+******************************************************************************/
+void aes256_keyschedule_sfs_lut(uint32_t* rkeys_sfs, const unsigned char* key){
+	uint32_t t0, t1, t2;
+	uint32_t rkeys[60];
+	// key schedule in the classical representation
+	rkeys[0] = LE_LOAD_32(key);
+	rkeys[1] = LE_LOAD_32(key + 4);
+	rkeys[2] = LE_LOAD_32(key + 8);
+	rkeys[3] = LE_LOAD_32(key + 12);
+	rkeys[4] = LE_LOAD_32(key + 16);
+	rkeys[5] = LE_LOAD_32(key + 20);
+	rkeys[6] = LE_LOAD_32(key + 24);
+	rkeys[7] = LE_LOAD_32(key + 28);
+	for(int i = 8; i < 56; i+=8) {
+		rkeys[i] = rkeys[i-8] ^ rcon[i/8];
+		rkeys[i] ^= (sbox_lut[rkeys[i-1] & 0xff] << 24);
+		rkeys[i] ^= sbox_lut[(rkeys[i-1] >> 8) & 0xff];
+		rkeys[i] ^= (sbox_lut[rkeys[i-1] >> 24] << 16);
+		rkeys[i] ^= (sbox_lut[(rkeys[i-1] >> 16) & 0xff] << 8);
+		rkeys[i+1] = rkeys[i] ^ rkeys[i-7];
+		rkeys[i+2] = rkeys[i+1] ^ rkeys[i-6];
+		rkeys[i+3] = rkeys[i+2] ^ rkeys[i-5];
+		rkeys[i+4] = rkeys[i-4];
+		rkeys[i+4] ^= sbox_lut[rkeys[i+3] & 0xff];
+		rkeys[i+4] ^= sbox_lut[(rkeys[i+3] >> 8) & 0xff] << 8;
+		rkeys[i+4] ^= sbox_lut[(rkeys[i+3] >> 16) & 0xff] << 16;
+		rkeys[i+4] ^= sbox_lut[rkeys[i+3] >> 24] << 24;
+		rkeys[i+5] = rkeys[i+4] ^ rkeys[i-3];
+		rkeys[i+6] = rkeys[i+5] ^ rkeys[i-2];
+		rkeys[i+7] = rkeys[i+6] ^ rkeys[i-1];
+	}
+	rkeys[56] = rkeys[48] ^ rcon[7];
+	rkeys[56] ^= (sbox_lut[rkeys[55] & 0xff] << 24);
+	rkeys[56] ^= sbox_lut[(rkeys[55] >> 8) & 0xff];
+	rkeys[56] ^= (sbox_lut[rkeys[55] >> 24] << 16);
+	rkeys[56] ^= (sbox_lut[(rkeys[55] >> 16) & 0xff] << 8);
+	rkeys[57] = rkeys[56] ^ rkeys[49];
+	rkeys[58] = rkeys[57] ^ rkeys[50];
+	rkeys[59] = rkeys[58] ^ rkeys[51];
+	// applying ShiftRows^(-1) to match the semi-fixsliced representation
+	for(int i = 4; i < 56; i+=8) {
+		t0 = rkeys[i];
+		t1 = rkeys[i+1];
+		t2 = rkeys[i+2];
+		rkeys[i] 	&= 0x000000ff;
+		rkeys[i] 	|= rkeys[i+3] & 0x0000ff00;
+		rkeys[i] 	|= rkeys[i+2] & 0x00ff0000;
+		rkeys[i] 	|= rkeys[i+1] & 0xff000000;
+		rkeys[i+1] 	&= 0x000000ff;
+		rkeys[i+1] 	|= t0 & 0x0000ff00;
+		rkeys[i+1] 	|= rkeys[i+3] & 0x00ff0000;
+		rkeys[i+1] 	|= rkeys[i+2] & 0xff000000;
+		rkeys[i+2] 	&= 0x000000ff;
+		rkeys[i+2] 	|= t1 & 0x0000ff00;
+		rkeys[i+2] 	|= t0 & 0x00ff0000;
+		rkeys[i+2] 	|= rkeys[i+3] & 0xff000000;
+		rkeys[i+3] 	&= 0x000000ff;
+		rkeys[i+3] 	|= t2 & 0x0000ff00;
+		rkeys[i+3] 	|= t1 & 0x00ff0000;
+		rkeys[i+3] 	|= t0 & 0xff000000;
+	}
+	// packing all round keys to match the semi-fixsliced representation
+	packing(rkeys_sfs, (unsigned char*)rkeys, (unsigned char*)rkeys);
+	for(int i = 1; i < 15; i++) {
 		packing(rkeys_sfs + i*8, (unsigned char*)(rkeys + i*4), (unsigned char*)(rkeys + i*4));
 		rkeys_sfs[i*8 + 1] ^= 0xffffffff; 	// NOT to speed up SBox calculations
 		rkeys_sfs[i*8 + 2] ^= 0xffffffff; 	// NOT to speed up SBox calculations

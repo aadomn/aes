@@ -1,5 +1,5 @@
 /******************************************************************************
-* Fixsliced implementations of AES-128 (encryption-only) in C language.
+* Fixsliced implementations of AES-128  and AES-256 (encryption-only) in C.
 * Fully-fixsliced implementation should run faster than the semi-fixsliced
 * version at the cost of a bigger code size.
 *
@@ -8,7 +8,7 @@
 * @author 	Alexandre Adomnicai, Nanyang Technological University, Singapore
 *			alexandre.adomnicai@ntu.edu.sg
 *
-* @date		July 2020
+* @date		August 2020
 ******************************************************************************/
 #include "aes.h"
 #include "internal-aes.h"
@@ -491,6 +491,43 @@ void aes128_encrypt_ffs(unsigned char* ctext0, unsigned char * ctext1,
 }
 
 /******************************************************************************
+* Fully-fixsliced AES-256 encryption (the ShiftRows is completely omitted).
+* Two 128-bit blocks ptext0, ptext1 are encrypted into ctext0, ctext1 without
+* any operating mode. The round keys are assumed to be pre-computed.
+* Note that it can be included in serial operating modes since ptext0, ptext1 
+* can refer to the same block. Moreover ctext parameters can be the same as
+* ptext parameters.
+******************************************************************************/
+void aes256_encrypt_ffs(unsigned char* ctext0, unsigned char * ctext1,
+					const unsigned char* ptext0, const unsigned char* ptext1,
+					const uint32_t* rkeys_ffs) {
+	uint32_t state[8]; 					// 256-bit internal state
+	packing(state, ptext0, ptext1);		// packs into bitsliced representation
+	for(int i = 0; i < 96; i+=32) { 	// loop over quadruple rounds
+		ark(state, rkeys_ffs + i);
+		sbox(state);
+		mixcolumns_0(state);
+		ark(state, rkeys_ffs + i+8);
+		sbox(state);
+		mixcolumns_1(state);
+		ark(state, rkeys_ffs + i+16);
+		sbox(state);
+		mixcolumns_2(state);
+		ark(state, rkeys_ffs + i+24);
+		sbox(state);
+		mixcolumns_3(state);
+	}
+	ark(state, rkeys_ffs + 96);
+	sbox(state);
+	mixcolumns_0(state);
+	ark(state, rkeys_ffs + 104);
+	sbox(state);
+	double_shiftrows(state); 			// resynchronization
+	ark(state, rkeys_ffs + 112);
+	unpacking(ctext0, ctext1, state);	// unpacks the state to the output
+}
+
+/******************************************************************************
 * Semi-fixsliced AES-128 encryption (the ShiftRows is computed every 2 rounds).
 * Two 128-bit blocks ptext0, ptext1 are encrypted into ctext0, ctext1 without
 * any operating mode. The round keys are assumed to be pre-computed.
@@ -514,5 +551,32 @@ void aes128_encrypt_sfs(unsigned char* ctext0, unsigned char* ctext1,
 			mixcolumns_3(state);
 	}
 	ark(state, rkeys_sfs + 80); 		// last AddRoundKey
+	unpacking(ctext0, ctext1, state); 	// unpacks the state to the output
+}
+
+/******************************************************************************
+* Semi-fixsliced AES-256 encryption (the ShiftRows is computed every 2 rounds).
+* Two 128-bit blocks ptext0, ptext1 are encrypted into ctext0, ctext1 without
+* any operating mode. The round keys are assumed to be pre-computed.
+* Note that it can be included in serial operating modes since ptext0, ptext1 
+* can refer to the same block. Moreover ctext parameters can be the same as
+* ptext parameters.
+******************************************************************************/
+void aes256_encrypt_sfs(unsigned char* ctext0, unsigned char* ctext1,
+					const unsigned char* ptext0, const unsigned char* ptext1,
+					const uint32_t* rkeys_sfs) {
+	uint32_t state[8]; 					// 256-bit internal state
+	packing(state, ptext0, ptext1); 	// packs into bitsliced representation
+	for(int i = 0; i < 7; i++) { 		// loop over double rounds
+		ark(state, rkeys_sfs + i*16);
+		sbox(state);
+		mixcolumns_0(state);
+		ark(state, rkeys_sfs + i*16+8);
+		sbox(state);
+		double_shiftrows(state);
+		if (i != 6) 					// No MixColumns in the last round
+			mixcolumns_3(state);
+	}
+	ark(state, rkeys_sfs + 112); 		// last AddRoundKey
 	unpacking(ctext0, ctext1, state); 	// unpacks the state to the output
 }
