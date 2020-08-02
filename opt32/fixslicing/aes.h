@@ -22,14 +22,14 @@ void aes256_encrypt_sfs(unsigned char ctext0[16], unsigned char ctext1[16],
 /* Fully-fixsliced key schedule functions */
 void aes128_keyschedule_ffs(uint32_t rkeys[88], const unsigned char key0[16],
 				const unsigned char key1[16]);
-void aes256_keyschedule_ffs(uint32_t rkeys[120], const unsigned char key0[16],
-				const unsigned char key1[16]);
+void aes256_keyschedule_ffs(uint32_t rkeys[120], const unsigned char key0[32],
+				const unsigned char key1[32]);
 
 /* Semi-fixsliced key schedule functions */
 void aes128_keyschedule_sfs(uint32_t rkeys[88], const unsigned char key0[16],
 				const unsigned char key1[16]);
-void aes256_keyschedule_sfs(uint32_t rkeys[120], const unsigned char key0[16],
-				const unsigned char key1[16]);
+void aes256_keyschedule_sfs(uint32_t rkeys[120], const unsigned char key0[32],
+				const unsigned char key1[32]);
 
 /* Fully-fixsliced key schedule functions (LUT-based) */
 void aes128_keyschedule_ffs_lut(uint32_t rkeys[88],const unsigned char key[16]);
@@ -37,6 +37,6 @@ void aes256_keyschedule_ffs_lut(uint32_t rkeys[120], const unsigned char key[32]
 
 /* Fully-fixsliced key schedule functions (LUT-based) */
 void aes128_keyschedule_sfs_lut(uint32_t rkeys[88], const unsigned char key[16]);
-void aes256_keyschedule_sfs_lut(uint32_t rkeys[88], const unsigned char key[16]);
+void aes256_keyschedule_sfs_lut(uint32_t rkeys[120], const unsigned char key[32]);
 
 #endif 	// AES_H_
