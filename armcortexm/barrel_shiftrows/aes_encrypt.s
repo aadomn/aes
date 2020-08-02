@@ -1,5 +1,5 @@
 /******************************************************************************
-* Bitsliced implementations of AES-128 (encryption-only) in C language using
+* Bitsliced implementations of AES-128 and AES-256 (encryption only) in C using
 * the barrel-shiftrows representation.
 *
 * See the paper available at https:// for more details.
@@ -7,7 +7,7 @@
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     July 2020
+* @date     August 2020
 ******************************************************************************/
 
 .syntax unified
@@ -695,6 +695,112 @@ loop_aes128_core:
     str.w   r1, [sp, #184]      // store loop counter on the stack
     cmp     r1, #8
     ble     loop_aes128_core    // loop until r1 <= 8
+    // Last round
+    mov     r12, sp             // r12 points to 1st quarter state
+    bl      add_round_key       // addroundkey on 1st quarter state
+    bl      sbox                // sbox on 1st quarter state
+    stm     sp, {r1,r3,r6,r9}
+    strd    r4, r0, [sp, #16]
+    strd    r2, r11, [sp, #24]
+    add.w   r12, sp, #32        // r12 points to 2nd quarter state
+    bl      add_round_key       // addroundkey on 2nd quarter state
+    bl      sbox                // sbox on 2nd quarter state
+    bl      shiftrows_1         // shiftrows on 2nd quarter state
+    add.w   r12, sp, #64        // r12 points to 3rd quarter state
+    bl      add_round_key       // addroundkey on 3rd quarter state
+    bl      sbox                // sbox on 3rd quarter state
+    bl      shiftrows_2         // shiftrows on 3rd quarter state
+    add.w   r12, sp, #96        // r12 points to 4th quarter state
+    bl      add_round_key       // addroundkey on 4th quarter state
+    bl      sbox                // sbox on 4th quarter state
+    bl      shiftrows_3         // shiftrows on 4t quarter state
+    strd    r1, r3, [sp, #96]
+    strd    r6, r9, [sp, #104]
+    strd    r4, r0, [sp, #112]
+    strd    r2, r11, [sp, #120]
+    mov     r12, sp             // r12 points to 1st quarter state     
+    bl      add_round_key       // last addroundkey on 1st quarter state
+    strd    r4, r5, [sp]
+    strd    r6, r7, [sp, #8]
+    strd    r8, r9, [sp, #16]
+    strd    r10, r11, [sp, #24]
+    add.w   r12, sp, #32        // r12 points to 2nd quarter state
+    bl      add_round_key       // last addroundkey on 2nd quarter state
+    strd    r4, r5, [sp, #32]
+    strd    r6, r7, [sp, #40]
+    strd    r8, r9, [sp, #48]
+    strd    r10, r11, [sp, #56]
+    add.w   r12, sp, #64        // r12 points to 3rd quarter state
+    bl      add_round_key       // last addroundkey on 3rd quarter state
+    strd    r4, r5, [sp, #64]
+    strd    r6, r7, [sp, #72]
+    strd    r8, r9, [sp, #80]
+    strd    r10, r11, [sp, #88]
+    add.w   r12, sp, #96        // r12 points to 4th quarter state
+    bl      add_round_key       // last addroundkey on 4th quarter state
+    strd    r4, r5, [sp, #96]
+    strd    r6, r7, [sp, #104]
+    strd    r8, r9, [sp, #112]
+    strd    r10, r11, [sp, #120]
+    bl      unpacking_2         // order matters, have to use another routine
+    sub.w   sp, sp, #128
+    bl      packing_1           // order does not matter, can reuse packing routine
+    sub.w   sp, sp, #64
+    ldr     r2, [sp, #188]      // restore output address in r2
+    bl      unpacking_0         // use another routine for input/output arrays
+    add.w   sp, sp, #156
+    pop     {r0-r12, r14}
+    bx      lr
+
+/******************************************************************************
+* Encryption of 8 128-bit blocks of data in parallel using AES-128 with the
+* barrel-shiftrows representation.
+* The round keys are assumed to be pre-computed.
+******************************************************************************/
+.align 2
+@ void aes256_encrypt(param* ctext, u32* rkey, const u8* ptext)
+.global aes256_encrypt
+.type   aes256_encrypt,%function
+aes256_encrypt:
+    push {r0-r12,r14}
+    sub.w   sp, sp, #188
+    str.w   r1, [sp, #180]      // store pointer to rkey on the stack
+    mov     r1, #0              // init loop counter
+    str.w   r1, [sp, #184]      // store loop counter on the stack
+    bl      packing_0           // 1st packing layer
+    sub.w   sp, sp, #32
+    bl      packing_1           // 2nd packing layer
+    sub.w   sp, sp, #64
+    bl      packing_2           // 3rd packing layer
+    sub.w   sp, sp, #128
+loop_aes256_core:
+    mov     r12, sp             // r12 points to 1st quarter state
+    bl      add_round_key       // addroundkey on 1st quarter state
+    bl      sbox                // sbox on 1st quarter state
+    stm     sp, {r1,r3,r6,r9}
+    strd    r4, r0, [sp, #16]
+    strd    r2, r11, [sp, #24]
+    add.w   r12, sp, #32        // r12 points to 2nd quarter state
+    bl      add_round_key       // addroundkey on 2nd quarter state
+    bl      sbox                // sbox on 2nd quarter state
+    bl      shiftrows_1         // shiftrows on 2nd quarter state
+    add.w   r12, sp, #64        // r12 points to 3rd quarter state
+    bl      add_round_key       // addroundkey on 3rd quarter state
+    bl      sbox                // sbox on 3rd quarter state
+    bl      shiftrows_2         // shiftrows on 3rd quarter state
+    add.w   r12, sp, #96        // r12 points to 4th quarter state
+    bl      add_round_key       // addroundkey on 4th quarter state
+    bl      sbox                // sbox on 4th quarter state
+    bl      shiftrows_3         // shiftrows on 4t quarter state
+    strd    r1, r3, [sp, #96]
+    strd    r6, r9, [sp, #104]
+    strd    r0, r2, [sp, #116]
+    bl      mixcolumns          // mixcolumns on the entire state
+    ldr.w   r1, [sp, #184]      // load loop counter
+    add.w   r1, r1, #1          // increment loop counter
+    str.w   r1, [sp, #184]      // store loop counter on the stack
+    cmp     r1, #12
+    ble     loop_aes256_core    // loop until r1 <= 8
     // Last round
     mov     r12, sp             // r12 points to 1st quarter state
     bl      add_round_key       // addroundkey on 1st quarter state

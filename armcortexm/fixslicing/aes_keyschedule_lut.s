@@ -1,5 +1,6 @@
 /******************************************************************************
-* ARM assembly implementations of the AES-128 key schedule to match fixslicing.
+* ARM assembly implementations of the AES-128 and AES-256 key schedules to
+* match fixslicing.
 * Note that those implementations rely on Look-Up Tables (LUT).
 *
 * See the paper available at https:// for more details.
@@ -7,7 +8,7 @@
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     July 2020
+* @date     August 2020
 ******************************************************************************/
 
 .syntax unified
@@ -42,7 +43,7 @@ AES_Sbox_compact:
 * contain the S-box address.
 ******************************************************************************/
 .align 2
-keyschedule_round_func:
+aes128_keyschedule_rfunc:
     movw    r1, #0xfc
     and     r8, r1, r7, lsr #8
     and     r9, r1, r7, lsr #16
@@ -66,14 +67,93 @@ keyschedule_round_func:
     lsr     r11, r11, r12
     and     r11, #0xff
     eor     r4, r2                  // adds the first rconst
-    eor     r4, r8                  // xor the columns
-    eor     r4, r4, r9, ror #24     // xor the columns
-    eor     r4, r4, r10, ror #16    // xor the columns
-    eor     r4, r4, r11, ror #8     // r4 <- rk[4]
-    eor     r5, r4                  // r5 <- rk[5]
-    eor     r6, r5                  // r6 <- rk[6]  
-    eor     r7, r6                  // r7 <- rk[7]
+    eor     r4, r8                  // xor the columns (1st sbox byte)
+    eor     r4, r4, r9, ror #24     // xor the columns (2nd sbox byte)
+    eor     r4, r4, r10, ror #16    // xor the columns (3rd sbox byte)
+    eor     r4, r4, r11, ror #8     // xor the columns (4th sbox byte)
+    eor     r5, r4                  // xor the columns
+    eor     r6, r5                  // xor the columns
+    eor     r7, r6                  // xor the columns
     push.w   {r4-r7}
+    bx      lr
+
+/******************************************************************************
+* Double round function of the AES-256 key expansion.
+* Note that it expects r2 to contain the corresponding round constant and r3 to
+* contain the S-box address.
+* Operates slightly differently than 'aes128_keyschedule_rfunc' as 8 words have
+* to be maintained in registers (instead of 4).
+******************************************************************************/
+.align 2
+aes256_keyschedule_rfunc_0:
+    eor     r4, r2                  // adds the first rconst
+    movw    r1, #0xfc
+    movw    r2, #0x18
+    and     r12, r1, r11, lsr #8
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r11, lsr #5     
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r4, r12                 // xor the columns (sbox output byte)
+    and     r12, r1, r11, lsr #16
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r11, lsr #13
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r4, r4, r12, ror #24    // xor the columns (sbox output byte)
+    and     r12, r1, r11, lsr #24
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r11, lsr #21
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r4, r4, r12, ror #16    // xor the columns (sbox output byte)
+    and     r12, r1, r11
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r11, lsl #3
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r4, r4, r12, ror #8     // xor the columns (sbox output byte)
+    eor     r5, r4                  // xor the columns
+    eor     r6, r5                  // xor the columns
+    eor     r7, r6                  // xor the columns
+    push.w  {r4-r7}                 // store on stack, to be packed later
+    bx      lr
+
+/******************************************************************************
+* Double round function of the AES-256 key expansion.
+* Note that it expects r2 to contain the corresponding round constant and r3 to
+* contain the S-box address.
+* Unlike 'aes256_keyschedule_rfunc_0' it doesnt compute the RotWord operation.
+******************************************************************************/
+aes256_keyschedule_rfunc_1:
+    and     r12, r1, r7, lsr #8
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r7, lsr #5     
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r8, r8, r12, lsl #8     // xor the columns (sbox output byte)
+    and     r12, r1, r7, lsr #16
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r7, lsr #13
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r8, r8, r12, lsl #16    // xor the columns (sbox output byte)
+    and     r12, r1, r7, lsr #24
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r7, lsr #21
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r8, r8, r12, lsl #24    // xor the columns (sbox output byte)
+    and     r12, r1, r7
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r7, lsl #3
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r8, r8, r12             // xor the columns (sbox output byte)
+    eor     r9, r8                  // xor the columns
+    eor     r10, r9                 // xor the columns
+    eor     r11, r10                // xor the columns
+    push    {r8-r11}
     bx      lr
 
 /******************************************************************************
@@ -238,35 +318,35 @@ inv_shiftrows_3:
 .align 2
 aes128_keyschedule_ffs_lut:
     push    {r1-r12,r14}
-    ldm     r1, {r4-r7}             // load the encryption key
-    adr     r3, AES_Sbox_compact    // load the sbox LUT address in r3
-    movw    r2, #0x01               // 1st const
-    bl      keyschedule_round_func  // 1st round
-    movw    r2, #0x02               // 2nd rconst
-    bl      keyschedule_round_func  // 2nd round
-    movw    r2, #0x04               // 3rd rconst
-    bl      keyschedule_round_func  // 3rd round
-    movw    r2, #0x08               // 4th rconst
-    bl      keyschedule_round_func  // 4th round
-    movw    r2, #0x10               // 5th rconst
-    bl      keyschedule_round_func  // 5th round
-    movw    r2, #0x20               // 6th rconst
-    bl      keyschedule_round_func  // 6th round
-    movw    r2, #0x40               // 7th rconst
-    bl      keyschedule_round_func  // 7th round
-    movw    r2, #0x80               // 8th rconst
-    bl      keyschedule_round_func  // 8th round
-    movw    r2, #0x1b               // 9th rconst
-    bl      keyschedule_round_func  // 9th round
-    movw    r2, #0x36               // 10th rconst
-    bl      keyschedule_round_func  // 10th round
+    ldm     r1, {r4-r7}                 // load the encryption key
+    adr     r3, AES_Sbox_compact        // load the sbox LUT address in r3
+    movw    r2, #0x01                   // 1st const
+    bl      aes128_keyschedule_rfunc    // 1st round
+    movw    r2, #0x02                   // 2nd rconst
+    bl      aes128_keyschedule_rfunc    // 2nd round
+    movw    r2, #0x04                   // 3rd rconst
+    bl      aes128_keyschedule_rfunc    // 3rd round
+    movw    r2, #0x08                   // 4th rconst
+    bl      aes128_keyschedule_rfunc    // 4th round
+    movw    r2, #0x10                   // 5th rconst
+    bl      aes128_keyschedule_rfunc    // 5th round
+    movw    r2, #0x20                   // 6th rconst
+    bl      aes128_keyschedule_rfunc    // 6th round
+    movw    r2, #0x40                   // 7th rconst
+    bl      aes128_keyschedule_rfunc    // 7th round
+    movw    r2, #0x80                   // 8th rconst
+    bl      aes128_keyschedule_rfunc    // 8th round
+    movw    r2, #0x1b                   // 9th rconst
+    bl      aes128_keyschedule_rfunc    // 9th round
+    movw    r2, #0x36                   // 10th rconst
+    bl      aes128_keyschedule_rfunc    // 10th round
     //done expanding, now start bitslicing
     //set r0 to end of rk, to be filled backwards
     add     r0, #352
     movw    r3, #0x0f0f
-    movt    r3, #0x0f0f             // r3 <- 0x0f0f0f0f (mask for SWAPMOVE)
-    eor     r2, r3, r3, lsl #2      // r2 <- 0x33333333 (mask for SWAPMOVE)
-    eor     r1, r2, r2, lsl #1      // r1 <- 0x55555555 (mask for SWAPMOVE)
+    movt    r3, #0x0f0f                 // r3 <- 0x0f0f0f0f (mask for SWAPMOVE)
+    eor     r2, r3, r3, lsl #2          // r2 <- 0x33333333 (mask for SWAPMOVE)
+    eor     r1, r2, r2, lsl #1          // r1 <- 0x55555555 (mask for SWAPMOVE)
     pop.w   {r4-r7}
     mov     r8, r4
     mov     r9, r5
@@ -326,6 +406,121 @@ aes128_keyschedule_ffs_lut:
 
 /******************************************************************************
 * Pre-computes all the round keys for a given encryption key, according to the
+* fully-fixsliced (ffs) representation.
+* Note that the round keys also include the NOTs omitted in the S-box. 
+******************************************************************************/
+@ void aes256_keyschedule_ffs_lut(u32* rkeys, const u8* key);
+.global aes256_keyschedule_ffs_lut
+.type   aes256_keyschedule_ffs_lut,%function
+.align 2
+aes256_keyschedule_ffs_lut:
+    push    {r0-r12,r14}
+    ldm     r1, {r4-r11}                // load the encryption key
+    adr     r3, AES_Sbox_compact        // load the sbox LUT address in r3
+    movw    r2, #0x01                   // 1st const
+    bl      aes256_keyschedule_rfunc_0  // 1st round
+    bl      aes256_keyschedule_rfunc_1  // 2nd round
+    movw    r2, #0x02                   // 2nd rconst
+    bl      aes256_keyschedule_rfunc_0  // 3rd round
+    bl      aes256_keyschedule_rfunc_1  // 4th round
+    movw    r2, #0x04                   // 3rd rconst
+    bl      aes256_keyschedule_rfunc_0  // 5th round
+    bl      aes256_keyschedule_rfunc_1  // 6th round
+    movw    r2, #0x08                   // 4th rconst
+    bl      aes256_keyschedule_rfunc_0  // 7th round
+    bl      aes256_keyschedule_rfunc_1  // 8th round
+    movw    r2, #0x10                   // 5th rconst
+    bl      aes256_keyschedule_rfunc_0  // 9th round
+    bl      aes256_keyschedule_rfunc_1  // 10th round
+    movw    r2, #0x20                   // 6th rconst
+    bl      aes256_keyschedule_rfunc_0  // 11th round
+    bl      aes256_keyschedule_rfunc_1  // 12th round
+    movw    r2, #0x40                   // 7th rconst
+    bl      aes256_keyschedule_rfunc_0  // 13th round
+    //done expanding, now start bitslicing
+    //set r0 to end of rk, to be filled backwards
+    ldr.w   r0, [sp, #208]              // restore rkeys address
+    pop.w   {r4-r7}                     // load the last rkey stored on the stack
+    add.w   r0, #480                    // points to the last rkey
+    movw    r3, #0x0f0f
+    movt    r3, #0x0f0f                 // r3 <- 0x0f0f0f0f (mask for SWAPMOVE)
+    eor     r2, r3, r3, lsl #2          // r2 <- 0x33333333 (mask for SWAPMOVE)
+    eor     r1, r2, r2, lsl #1          // r1 <- 0x55555555 (mask for SWAPMOVE)
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_3
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_2
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_3
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_2
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_3
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_2
+    bl      packing_rkey
+    ldr     r12, [sp, #4]!
+    add.w   r12, #16
+    ldm     r12, {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    ldr     r12, [sp]
+    ldm     r12, {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    mvn     r5, r5              // cancels the NOT applied in 'packing_rkey'
+    mvn     r8, r8              // cancels the NOT applied in 'packing_rkey'
+    mvn     r7, r7              // cancels the NOT applied in 'packing_rkey'
+    mvn     r11, r11            // cancels the NOT applied in 'packing_rkey'
+    strd    r7, r11, [r0, #24]  // restore after fix
+    strd    r6, r10, [r0, #16]  // restore after fix
+    strd    r5, r9, [r0, #8]    // restore after fix
+    strd    r4, r8, [r0]        // restore after fix
+    pop     {r1-r12, r14}       // restore context
+    bx      lr
+
+/******************************************************************************
+* Pre-computes all the round keys for a given encryption key, according to the
 * semi-fixsliced (sfs) representation.
 * Note that the round keys also include the NOTs omitted in the S-box. 
 ******************************************************************************/
@@ -335,35 +530,35 @@ aes128_keyschedule_ffs_lut:
 .align 2
 aes128_keyschedule_sfs_lut:
     push    {r1-r12,r14}
-    ldm     r1, {r4-r7}             // load the encryption key
-    adr     r3, AES_Sbox_compact    // load the sbox LUT address in r3
-    movw    r2, #0x01               // 1st const
-    bl      keyschedule_round_func  // 1st round
-    movw    r2, #0x02               // 2nd rconst
-    bl      keyschedule_round_func  // 2nd round
-    movw    r2, #0x04               // 3rd rconst
-    bl      keyschedule_round_func  // 3rd round
-    movw    r2, #0x08               // 4th rconst
-    bl      keyschedule_round_func  // 4th round
-    movw    r2, #0x10               // 5th rconst
-    bl      keyschedule_round_func  // 5th round
-    movw    r2, #0x20               // 6th rconst
-    bl      keyschedule_round_func  // 6th round
-    movw    r2, #0x40               // 7th rconst
-    bl      keyschedule_round_func  // 7th round
-    movw    r2, #0x80               // 8th rconst
-    bl      keyschedule_round_func  // 8th round
-    movw    r2, #0x1b               // 9th rconst
-    bl      keyschedule_round_func  // 9th round
-    movw    r2, #0x36               // 10th rconst
-    bl      keyschedule_round_func  // 10th round
+    ldm     r1, {r4-r7}                 // load the encryption key
+    adr     r3, AES_Sbox_compact        // load the sbox LUT address in r3
+    movw    r2, #0x01                   // 1st const
+    bl      aes128_keyschedule_rfunc    // 1st round
+    movw    r2, #0x02                   // 2nd rconst
+    bl      aes128_keyschedule_rfunc    // 2nd round
+    movw    r2, #0x04                   // 3rd rconst
+    bl      aes128_keyschedule_rfunc    // 3rd round
+    movw    r2, #0x08                   // 4th rconst
+    bl      aes128_keyschedule_rfunc    // 4th round
+    movw    r2, #0x10                   // 5th rconst
+    bl      aes128_keyschedule_rfunc    // 5th round
+    movw    r2, #0x20                   // 6th rconst
+    bl      aes128_keyschedule_rfunc    // 6th round
+    movw    r2, #0x40                   // 7th rconst
+    bl      aes128_keyschedule_rfunc    // 7th round
+    movw    r2, #0x80                   // 8th rconst
+    bl      aes128_keyschedule_rfunc    // 8th round
+    movw    r2, #0x1b                   // 9th rconst
+    bl      aes128_keyschedule_rfunc    // 9th round
+    movw    r2, #0x36                   // 10th rconst
+    bl      aes128_keyschedule_rfunc    // 10th round
     //done expanding, now start bitslicing
     //set r0 to end of rk, to be filled backwards
     add     r0, #352
     movw    r3, #0x0f0f
-    movt    r3, #0x0f0f             // r3 <- 0x0f0f0f0f (mask for SWAPMOVE)
-    eor     r2, r3, r3, lsl #2      // r2 <- 0x33333333 (mask for SWAPMOVE)
-    eor     r1, r2, r2, lsl #1      // r1 <- 0x55555555 (mask for SWAPMOVE)
+    movt    r3, #0x0f0f                 // r3 <- 0x0f0f0f0f (mask for SWAPMOVE)
+    eor     r2, r3, r3, lsl #2          // r2 <- 0x33333333 (mask for SWAPMOVE)
+    eor     r1, r2, r2, lsl #1          // r1 <- 0x55555555 (mask for SWAPMOVE)
     pop.w   {r4-r7}
     mov     r8, r4
     mov     r9, r5
@@ -407,6 +602,130 @@ aes128_keyschedule_sfs_lut:
     mov     r11, r7
     bl      packing_rkey
     pop.w   {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    ldr     r12, [sp]
+    ldm     r12, {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    mvn     r5, r5              // cancels the NOT applied in 'packing_rkey'
+    mvn     r8, r8              // cancels the NOT applied in 'packing_rkey'
+    mvn     r7, r7              // cancels the NOT applied in 'packing_rkey'
+    mvn     r11, r11            // cancels the NOT applied in 'packing_rkey'
+    strd    r7, r11, [r0, #24]  // restore after fix
+    strd    r6, r10, [r0, #16]  // restore after fix
+    strd    r5, r9, [r0, #8]    // restore after fix
+    strd    r4, r8, [r0]        // restore after fix
+    pop     {r1-r12, r14}       // restore context
+    bx      lr
+
+/******************************************************************************
+* Pre-computes all the round keys for a given encryption key, according to the
+* semi-fixsliced (sfs) representation.
+* Note that the round keys also include the NOTs omitted in the S-box. 
+******************************************************************************/
+@ void aes256_keyschedule_sfs_lut(u32* rkeys, const u8* key);
+.global aes256_keyschedule_sfs_lut
+.type   aes256_keyschedule_sfs_lut,%function
+.align 2
+aes256_keyschedule_sfs_lut:
+    push    {r0-r12,r14}
+    ldm     r1, {r4-r11}                // load the encryption key
+    adr     r3, AES_Sbox_compact        // load the sbox LUT address in r3
+    movw    r2, #0x01                   // 1st const
+    bl      aes256_keyschedule_rfunc_0  // 1st round
+    bl      aes256_keyschedule_rfunc_1  // 2nd round
+    movw    r2, #0x02                   // 2nd rconst
+    bl      aes256_keyschedule_rfunc_0  // 3rd round
+    bl      aes256_keyschedule_rfunc_1  // 4th round
+    movw    r2, #0x04                   // 3rd rconst
+    bl      aes256_keyschedule_rfunc_0  // 5th round
+    bl      aes256_keyschedule_rfunc_1  // 6th round
+    movw    r2, #0x08                   // 4th rconst
+    bl      aes256_keyschedule_rfunc_0  // 7th round
+    bl      aes256_keyschedule_rfunc_1  // 8th round
+    movw    r2, #0x10                   // 5th rconst
+    bl      aes256_keyschedule_rfunc_0  // 9th round
+    bl      aes256_keyschedule_rfunc_1  // 10th round
+    movw    r2, #0x20                   // 6th rconst
+    bl      aes256_keyschedule_rfunc_0  // 11th round
+    bl      aes256_keyschedule_rfunc_1  // 12th round
+    movw    r2, #0x40                   // 7th rconst
+    bl      aes256_keyschedule_rfunc_0  // 13th round
+    //done expanding, now start bitslicing
+    //set r0 to end of rk, to be filled backwards
+    ldr.w   r0, [sp, #208]              // restore rkeys address
+    pop.w   {r4-r7}                     // load the last rkey stored on the stack
+    add.w   r0, #480                    // points to the last rkey
+    movw    r3, #0x0f0f
+    movt    r3, #0x0f0f                 // r3 <- 0x0f0f0f0f (mask for SWAPMOVE)
+    eor     r2, r3, r3, lsl #2          // r2 <- 0x33333333 (mask for SWAPMOVE)
+    eor     r1, r2, r2, lsl #1          // r1 <- 0x55555555 (mask for SWAPMOVE)
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    bl      inv_shiftrows_1
+    bl      packing_rkey
+    pop.w   {r4-r7}
+    mov     r8, r4
+    mov     r9, r5
+    mov     r10, r6
+    mov     r11, r7
+    bl      packing_rkey
+    ldr     r12, [sp, #4]!
+    add.w   r12, #16
+    ldm     r12, {r4-r7}
     bl      inv_shiftrows_1
     bl      packing_rkey
     ldr     r12, [sp]

@@ -1,5 +1,6 @@
 /******************************************************************************
-* ARM assembly implementations of the AES-128 key schedule to match fixslicing.
+* ARM assembly implemetnations of the AES-128 and AES-256 key schedule to
+* match fixslicing.
 * Note that those implementations are fully bitsliced and do not rely on any
 * Look-Up Table (LUT).
 *
@@ -8,7 +9,7 @@
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     July 2020
+* @date     August 2020
 ******************************************************************************/
 
 .syntax unified
@@ -233,13 +234,13 @@ sbox:
     // ('r6', 'S2'),('r7', 'S3'), ('r8', 'S4'), ('r11', 'S7')]
 
 /******************************************************************************
-* Subroutine that XORs the columns after the S-box during the key schedule
-* round function, for rounds i such that (i % 4) == 0.
+* Subroutine that XORs the columns after the S-box during the AES-128 key
+* schedule round function, for rounds i such that (i % 4) == 0.
 * Note that the code size could be reduced at the cost of some instructions
 * since some redundant code is applied on different registers.
 ******************************************************************************/
 .align 2
-xor_columns_0:
+aes128_xorcolumns_rotword:
     ldr     r12, [sp, #56]          // restore 'rkeys' address
     ldr.w   r5, [r12, #28]          // load rkey word of rkey from prev round
     movw    r4, #0xc0c0
@@ -359,13 +360,13 @@ xor_columns_0:
     bx      lr
 
 /******************************************************************************
-* Subroutine that XORs the columns after the S-box during the key schedule
-* round function, for rounds i such that (i % 4) == 1.
-* Note that the code size could be reduced at the cost of some instructions
-* since some redundant code is applied on different registers.
+* Subroutine that XORs the columns after the S-box during the AES-256 key
+* schedule round function, for rounds i such that (i % 4) == 0.
+* Differs from 'aes128_xorcolumns_rotword' by the rkeys' indexes to be involved
+* in XORs.
 ******************************************************************************/
 .align 2
-xor_columns_1:
+aes256_xorcolumns_rotword:
     ldr     r12, [sp, #56]          // restore 'rkeys' address
     ldr.w   r5, [r12, #28]          // load rkey word of rkey from prev round
     movw    r4, #0xc0c0
@@ -381,24 +382,10 @@ xor_columns_1:
     eor     r9, r5, r11, ror #2     // r9 <- r5 ^ (r11 >>> 2)
     and     r9, r9, r4, ror #6      // r9 <- r9 & 0x03030303
     orr     r11, r11, r9            // r11<- r11 | r9
-    // applies ShiftRows^[-1]
-    and     r9, r5, #0xfc00         // r9 <- r5 & 0x0000fc00
-    and     r10, r5, #0x0300        // r10<- r5 & 0x00000300
-    orr     r9, r9, r10, lsl #8     // r9 <- r9 | r10 << 8
-    and     r10, r5, #0xf00000      // r10<- r5 & 0x00f00000
-    orr     r9, r9, r10, lsr #2     // r9 <- r9 | r10 >> 2
-    and     r10, r5, #0xf0000       // r10<- r5 & 0x000f0000
-    orr     r9, r9, r10, lsl #6     // r9 <- r9 | r10 << 6
-    and     r10, r5, #0xc0000000    // r10<- r5 & 0xc0000000
-    orr     r9, r9, r10, lsr #4     // r9 <- r9 | r10 >> 4
-    and     r10, r5, #0x3f000000    // r10<- r5 & 0x3f000000
-    orr     r9, r9, r10, ror #28    // r9 <- r9 | (r10 >>> 28)
-    and     r10, r5, #0xff          // r10<- r5 & 0xff
-    orr     r9, r10, r9, ror #2     // r9 <- ShiftRows^[-1](r5)
-    mvn     r9, r9                  // NOT that is omitted in sbox
+    mvn     r9, r5                  // NOT omitted in sbox
     ldr.w   r5, [r12, #24]          // load rkey word of rkey from prev round
-    str     r9, [r12, #28]          // store the rkey word after ShiftRows^[-1]
-    str     r11, [r12, #60]         // store new rkey word in 'rkeys'
+    str     r9, [r12, #28]          // store new rkey word after NOT
+    str     r11, [r12, #92]         // store new rkey word in 'rkeys'
     eor     r10, r5, r2, ror #2     // r10<- r5 ^ (r2 >>> 2)
     bic     r10, r4, r10            // r10<- ~r10 & 0xc0c0c0c0 (NOT omitted in sbox)
     eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
@@ -410,24 +397,10 @@ xor_columns_1:
     eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
     and     r9, r9, r4, ror #6      // r9 <- r9 & 0x03030303
     orr     r10, r10, r9            // r10<- r10 | r9
-    // applies ShiftRows^[-1]
-    and     r9, r5, #0xfc00         // r9 <- r5 & 0x0000fc00
-    and     r2, r5, #0x0300         // r2 <- r5 & 0x00000300
-    orr     r9, r9, r2, lsl #8      // r9 <- r9 | r2 << 8
-    and     r2, r5, #0xf00000       // r2 <- r5 & 0x00f00000
-    orr     r9, r9, r2, lsr #2      // r9 <- r9 | r2 >> 2
-    and     r2, r5, #0xf0000        // r2 <- r5 & 0x000f0000
-    orr     r9, r9, r2, lsl #6      // r9 <- r9 | r2 << 6
-    and     r2, r5, #0xc0000000     // r2 <- r5 & 0xc0000000
-    orr     r9, r9, r2, lsr #4      // r9 <- r9 | r2 >> 4
-    and     r2, r5, #0x3f000000     // r2 <- r5 & 0x3f000000
-    orr     r9, r9, r2, ror #28     // r9 <- r9 | (r2 >>> 28)
-    and     r2, r5, #0xff           // r2 <- r5 & 0xff
-    orr     r5, r2, r9, ror #2      // r5 <- ShiftRows^[-1](r5)
-    mvn     r5, r5                  // NOT that is omitted in sbox
+    mvn     r9, r5                  // NOT omitted in sbox
     ldr.w   r2, [r12, #20]          // load rkey word of rkey from prev round
-    str.w   r5, [r12, #24]          // store the rkey word after ShiftRows^[-1]
-    str     r10, [r12, #56]         // store new rkey word in 'rkeys'
+    str     r9, [r12, #24]          // store new rkey word after NOT
+    str     r10, [r12, #88]         // store new rkey word in 'rkeys'
     eor     r9, r2, r0, ror #2      // r9 <- r2 ^ (r9 >>> 2)
     and     r9, r4, r9              // r9 <- r9 & 0xc0c0c0c0
     eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
@@ -439,23 +412,8 @@ xor_columns_1:
     eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
     and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
     orr     r9, r9, r0              // r9 <- r9 | r0
-    // applies ShiftRows^[-1]
-    and     r5, r2, #0xfc00         // r5 <- r2 & 0x0000fc00
-    and     r0, r2, #0x0300         // r0 <- r2 & 0x00000300
-    orr     r5, r5, r0, lsl #8      // r5 <- r5 | r0 << 8
-    and     r0, r2, #0xf00000       // r0 <- r2 & 0x00f00000
-    orr     r5, r5, r0, lsr #2      // r5 <- r5 | r0 >> 2
-    and     r0, r2, #0xf0000        // r0 <- r2 & 0x000f0000
-    orr     r5, r5, r0, lsl #6      // r5 <- r5 | r0 << 6
-    and     r0, r2, #0xc0000000     // r0 <- r2 & 0xc0000000
-    orr     r5, r5, r0, lsr #4      // r5 <- r5 | r0 >> 4
-    and     r0, r2, #0x3f000000     // r0 <- r2 & 0x3f000000
-    orr     r5, r5, r0, ror #28     // r5 <- r5 | (r0 >>> 28)
-    and     r0, r2, #0xff           // r0 <- r2 & 0xff
-    orr     r5, r0, r5, ror #2      // r5 <- ShiftRows^[-1](r2)
     ldr.w   r2, [r12, #16]          // load rkey word of rkey from prev round
-    str.w   r5, [r12, #20]          // store the rkey word after ShiftRows^[-1]
-    str.w   r9, [r12, #52]          // store new rkey word in 'rkeys'
+    str.w   r9, [r12, #84]          // store new rkey word in 'rkeys'
     eor     r8, r2, r8, ror #2      // r8 <- r2 ^ (r8 >>> 2)
     and     r8, r4, r8              // r8 <- r8 & 0xc0c0c0c0
     eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
@@ -467,23 +425,8 @@ xor_columns_1:
     eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
     and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
     orr     r8, r8, r0              // r8 <- r8 | r0
-    // applies ShiftRows^[-1]
-    and     r5, r2, #0xfc00         // r5 <- r2 & 0x0000fc00
-    and     r0, r2, #0x0300         // r0 <- r2 & 0x00000300
-    orr     r5, r5, r0, lsl #8      // r5 <- r5 | r0 << 8
-    and     r0, r2, #0xf00000       // r0 <- r2 & 0x00f00000
-    orr     r5, r5, r0, lsr #2      // r5 <- r5 | r0 >> 2
-    and     r0, r2, #0xf0000        // r0 <- r2 & 0x000f0000
-    orr     r5, r5, r0, lsl #6      // r5 <- r5 | r0 << 6
-    and     r0, r2, #0xc0000000     // r0 <- r2 & 0xc0000000
-    orr     r5, r5, r0, lsr #4      // r5 <- r5 | r0 >> 4
-    and     r0, r2, #0x3f000000     // r0 <- r2 & 0x3f000000
-    orr     r5, r5, r0, ror #28     // r5 <- r5 | (r0 >>> 28)
-    and     r0, r2, #0xff           // r0 <- r2 & 0xff
-    orr     r5, r0, r5, ror #2      // r5 <- ShiftRows^[-1](r2)
     ldr.w   r2, [r12, #12]          // load rkey word of rkey from prev round
-    str.w   r5, [r12, #16]          // store the rkey word after ShiftRows^[-1]
-    str.w   r8, [r12, #48]          // store new rkey word in 'rkeys'
+    str.w   r8, [r12, #80]          // store new rkey word in 'rkeys'
     eor     r7, r2, r7, ror #2      // r7 <- r2 ^ (r7 >>> 2)
     and     r7, r4, r7              // r7 <- r7 & 0xc0c0c0c0
     eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
@@ -495,23 +438,8 @@ xor_columns_1:
     eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
     and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
     orr     r7, r7, r0              // r7 <- r7 | r0
-    // applies ShiftRows^[-1]
-    and     r5, r2, #0xfc00         // r5 <- r2 & 0x0000fc00
-    and     r0, r2, #0x0300         // r0 <- r2 & 0x00000300
-    orr     r5, r5, r0, lsl #8      // r5 <- r5 | r0 << 8
-    and     r0, r2, #0xf00000       // r0 <- r2 & 0x00f00000
-    orr     r5, r5, r0, lsr #2      // r5 <- r5 | r0 >> 2
-    and     r0, r2, #0xf0000        // r0 <- r2 & 0x000f0000
-    orr     r5, r5, r0, lsl #6      // r5 <- r5 | r0 << 6
-    and     r0, r2, #0xc0000000     // r0 <- r2 & 0xc0000000
-    orr     r5, r5, r0, lsr #4      // r5 <- r5 | r0 >> 4
-    and     r0, r2, #0x3f000000     // r0 <- r2 & 0x3f000000
-    orr     r5, r5, r0, ror #28     // r5 <- r5 | (r0 >>> 28)
-    and     r0, r2, #0xff           // r0 <- r2 & 0xff
-    orr     r5, r0, r5, ror #2      // r5 <- ShiftRows^[-1](r2)
     ldr.w   r2, [r12, #8]           // load rkey word of rkey from prev round
-    str.w   r5, [r12, #12]          // store the rkey word after ShiftRows^[-1]
-    str.w   r7, [r12, #44]          // store new rkey word in 'rkeys'
+    str.w   r7, [r12, #76]          // store new rkey word in 'rkeys'
     eor     r6, r2, r6, ror #2      // r6 <- r2 ^ (r6 >>> 2)
     bic     r6, r4, r6              // r6 <- ~r6 & 0xc0c0c0c0 (NOT omitted in sbox)
     eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
@@ -523,24 +451,10 @@ xor_columns_1:
     eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
     and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
     orr     r6, r6, r0              // r6 <- r6 | r0
-    // applies ShiftRows^[-1]
-    and     r5, r2, #0xfc00         // r5 <- r2 & 0x0000fc00
-    and     r0, r2, #0x0300         // r0 <- r2 & 0x00000300
-    orr     r5, r5, r0, lsl #8      // r5 <- r5 | r0 << 8
-    and     r0, r2, #0xf00000       // r0 <- r2 & 0x00f00000
-    orr     r5, r5, r0, lsr #2      // r5 <- r5 | r0 >> 2
-    and     r0, r2, #0xf0000        // r0 <- r2 & 0x000f0000
-    orr     r5, r5, r0, lsl #6      // r5 <- r5 | r0 << 6
-    and     r0, r2, #0xc0000000     // r0 <- r2 & 0xc0000000
-    orr     r5, r5, r0, lsr #4      // r5 <- r5 | r0 >> 4
-    and     r0, r2, #0x3f000000     // r0 <- r2 & 0x3f000000
-    orr     r5, r5, r0, ror #28     // r5 <- r5 | (r0 >>> 28)
-    and     r0, r2, #0xff           // r0 <- r2 & 0xff
-    orr     r5, r0, r5, ror #2      // r5 <- ShiftRows^[-1](r2)
-    mvn     r5, r5                  // NOT that is omitted in sbox
+    mvn     r0, r2                  // NOT omitted in sbox
     ldr.w   r2, [r12, #4]           // load rkey word of rkey from prev round
-    str.w   r5, [r12, #8]           // store the rkey word after ShiftRows^[-1]
-    str.w   r6, [r12, #40]          // store new rkey word in 'rkeys'
+    str.w   r0, [r12, #8]           // store new rkey word after NOT
+    str.w   r6, [r12, #72]          // store new rkey word in 'rkeys'
     eor     r5, r2, r3, ror #2      // r5 <- r2 ^ (r3 >>> 2)
     bic     r5, r4, r5              // r5 <- ~r5 & 0xc0c0c0c0 (NOT omitted in sbox)
     eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
@@ -552,24 +466,10 @@ xor_columns_1:
     eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
     and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
     orr     r5, r5, r0              // r5 <- r5 | r0
-    // applies ShiftRows^[-1]
-    and     r3, r2, #0xfc00         // r3 <- r2 & 0x0000fc00
-    and     r0, r2, #0x0300         // r0 <- r2 & 0x00000300
-    orr     r3, r3, r0, lsl #8      // r3 <- r3 | r0 << 8
-    and     r0, r2, #0xf00000       // r0 <- r2 & 0x00f00000
-    orr     r3, r3, r0, lsr #2      // r3 <- r3 | r0 >> 2
-    and     r0, r2, #0xf0000        // r0 <- r2 & 0x000f0000
-    orr     r3, r3, r0, lsl #6      // r3 <- r3 | r0 << 6
-    and     r0, r2, #0xc0000000     // r0 <- r2 & 0xc0000000
-    orr     r3, r3, r0, lsr #4      // r3 <- r3 | r0 >> 4
-    and     r0, r2, #0x3f000000     // r0 <- r2 & 0x3f000000
-    orr     r3, r3, r0, ror #28     // r3 <- r3 | (r0 >>> 28)
-    and     r0, r2, #0xff           // r0 <- r2 & 0xff
-    orr     r3, r0, r3, ror #2      // r3 <- ShiftRows^[-1](r2)
-    mvn     r3, r3                  // NOT that is omitted in sbox
+    mvn     r0, r2                  // NOT omitted in sbox
     ldr.w   r2, [r12], #32          // load rkey word of rkey from prev round
-    str.w   r3, [r12, #-28]         // store new rkey word in 'rkeys'
-    str.w   r5, [r12, #4]
+    str.w   r0, [r12, #-28]         // store new rkey word after NOT
+    str.w   r5, [r12, #36]          // store new rkey word in 'rkeys'
     eor     r3, r2, r1, ror #2      // r3 <- r2 ^ (r1 >>> 2)
     and     r3, r4, r3              // r3 <- r3 & 0xc0c0c0c0
     eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
@@ -581,7 +481,145 @@ xor_columns_1:
     eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
     and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
     orr     r4, r3, r0              // r4 <- r3 | r0
-    str.w   r4, [r12]
+    str.w   r4, [r12, #32]
+    str.w   r12, [sp, #56]          // store the new rkeys address on the stack
+    bx      lr
+
+/******************************************************************************
+* Subroutine that XORs the columns after the S-box during the AES-256 key
+* schedule round function, for rounds i such that (i % 4) == 0.
+* It differs from 'aes256_xorcolumns_rotword' by the omission of the rotword
+* operation (i.e. 'ror #26' instead of 'ror #2').
+******************************************************************************/
+.align 2
+aes256_xorcolumns:
+    ldr     r12, [sp, #56]          // restore 'rkeys' address
+    ldr.w   r5, [r12, #28]          // load rkey word of rkey from prev round
+    movw    r4, #0xc0c0
+    movt    r4, #0xc0c0             // r4 <- 0xc0c0c0c0
+    eor     r11, r5, r11, ror #26   // r11<- r5 ^ (r11 >>> 26)
+    bic     r11, r4, r11            // r11<- ~r11 & 0xc0c0c0c0 (NOT omitted in sbox)
+    eor     r9, r5, r11, ror #2     // r9 <- r5 ^ (r11 >>> 2)
+    and     r9, r9, r4, ror #2      // r9 <- r9 & 0x30303030
+    orr     r11, r11, r9            // r11<- r11 | r9
+    eor     r9, r5, r11, ror #2     // r9 <- r5 ^ (r11 >>> 2)
+    and     r9, r9, r4, ror #4      // r9 <- r9 & 0x0c0c0c0c
+    orr     r11, r11, r9            // r11<- r11 | r9
+    eor     r9, r5, r11, ror #2     // r9 <- r5 ^ (r11 >>> 2)
+    and     r9, r9, r4, ror #6      // r9 <- r9 & 0x03030303
+    orr     r11, r11, r9            // r11<- r11 | r9
+    mvn     r9, r5                  // NOT omitted in sbox
+    ldr.w   r5, [r12, #24]          // load rkey word of rkey from prev round
+    str     r9, [r12, #28]          // store new rkey word after NOT
+    str     r11, [r12, #92]         // store new rkey word in 'rkeys'
+    eor     r10, r5, r2, ror #26    // r10<- r5 ^ (r2 >>> 2)
+    bic     r10, r4, r10            // r10<- ~r10 & 0xc0c0c0c0 (NOT omitted in sbox)
+    eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
+    and     r9, r9, r4, ror #2      // r9 <- r9 & 0x30303030
+    orr     r10, r10, r9            // r10<- r10 | r9
+    eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
+    and     r9, r9, r4, ror #4      // r9 <- r9 & 0x0c0c0c0c
+    orr     r10, r10, r9            // r10<- r10 | r9
+    eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
+    and     r9, r9, r4, ror #6      // r9 <- r9 & 0x03030303
+    orr     r10, r10, r9            // r10<- r10 | r9
+    mvn     r9, r5                  // NOT omitted in sbox
+    ldr.w   r2, [r12, #20]          // load rkey word of rkey from prev round
+    str     r9, [r12, #24]          // store new rkey word after NOT
+    str     r10, [r12, #88]         // store new rkey word in 'rkeys'
+    eor     r9, r2, r0, ror #26     // r9 <- r2 ^ (r9 >>> 26)
+    and     r9, r4, r9              // r9 <- r9 & 0xc0c0c0c0
+    eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
+    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
+    orr     r9, r9, r0              // r9 <- r9 | r0
+    eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
+    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
+    orr     r9, r9, r0              // r9 <- r9 | r0
+    eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
+    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
+    orr     r9, r9, r0              // r9 <- r9 | r0
+    ldr.w   r2, [r12, #16]          // load rkey word of rkey from prev round
+    str.w   r9, [r12, #84]          // store new rkey word in 'rkeys'
+    eor     r8, r2, r8, ror #26     // r8 <- r2 ^ (r8 >>> 26)
+    and     r8, r4, r8              // r8 <- r8 & 0xc0c0c0c0
+    eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
+    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
+    orr     r8, r8, r0              // r8 <- r8 | r0
+    eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
+    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
+    orr     r8, r8, r0              // r8 <- r8 | r0
+    eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
+    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
+    orr     r8, r8, r0              // r8 <- r8 | r0
+    ldr.w   r2, [r12, #12]          // load rkey word of rkey from prev round
+    str.w   r8, [r12, #80]          // store new rkey word in 'rkeys'
+    eor     r7, r2, r7, ror #26     // r7 <- r2 ^ (r7 >>> 26)
+    and     r7, r4, r7              // r7 <- r7 & 0xc0c0c0c0
+    eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
+    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
+    orr     r7, r7, r0              // r7 <- r7 | r0
+    eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
+    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
+    orr     r7, r7, r0              // r7 <- r7 | r0
+    eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
+    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
+    orr     r7, r7, r0              // r7 <- r7 | r0
+    ldr.w   r2, [r12, #8]           // load rkey word of rkey from prev round
+    str.w   r7, [r12, #76]          // store new rkey word in 'rkeys'
+    eor     r6, r2, r6, ror #26     // r6 <- r2 ^ (r6 >>> 26)
+    bic     r6, r4, r6              // r6 <- ~r6 & 0xc0c0c0c0 (NOT omitted in sbox)
+    eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
+    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
+    orr     r6, r6, r0              // r6 <- r6 | r0
+    eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
+    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
+    orr     r6, r6, r0              // r6 <- r6 | r0
+    eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
+    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
+    orr     r6, r6, r0              // r6 <- r6 | r0
+    mvn     r0, r2                  // NOT omitted in sbox
+    ldr.w   r2, [r12, #4]           // load rkey word of rkey from prev round
+    str.w   r0, [r12, #8]           // store new rkey word after NOT
+    str.w   r6, [r12, #72]          // store new rkey word in 'rkeys'
+    eor     r5, r2, r3, ror #26     // r5 <- r2 ^ (r3 >>> 26)
+    bic     r5, r4, r5              // r5 <- ~r5 & 0xc0c0c0c0 (NOT omitted in sbox)
+    eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
+    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
+    orr     r5, r5, r0              // r5 <- r5 | r0
+    eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
+    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
+    orr     r5, r5, r0              // r5 <- r5 | r0
+    eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
+    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
+    orr     r5, r5, r0              // r5 <- r5 | r0
+    mvn     r0, r2                  // NOT omitted in sbox
+    ldr.w   r2, [r12], #32          // load rkey word of rkey from prev round
+    str.w   r0, [r12, #-28]         // store new rkey word after NOT
+    str.w   r5, [r12, #36]          // store new rkey word in 'rkeys'
+    eor     r3, r2, r1, ror #26     // r3 <- r2 ^ (r1 >>> 26)
+    and     r3, r4, r3              // r3 <- r3 & 0xc0c0c0c0
+    eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
+    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
+    orr     r3, r3, r0              // r3 <- r3 | r0
+    eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
+    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
+    orr     r3, r3, r0              // r3 <- r3 | r0
+    eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
+    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
+    orr     r4, r3, r0              // r4 <- r3 | r0
+    str.w   r4, [r12, #32]
+    str.w   r12, [sp, #56]          // store the new rkeys address on the stack
+    bx      lr
+
+/******************************************************************************
+* Applies ShiftRows^(-1) on a round key to match the fixsliced representation.
+******************************************************************************/
+.align 2
+inv_shiftrows_1:
+    movw    r1, #8
+    sub.w   r12, #32
+loop_inv_sr_1:
+    ldr.w   r2, [r12]
     and     r3, r2, #0xfc00         // r3 <- r2 & 0x0000fc00
     and     r0, r2, #0x0300         // r0 <- r2 & 0x00000300
     orr     r3, r3, r0, lsl #8      // r3 <- r3 | r0 << 8
@@ -595,395 +633,48 @@ xor_columns_1:
     orr     r3, r3, r0, ror #28     // r3 <- r3 | (r0 >>> 28)
     and     r0, r2, #0xff           // r0 <- r2 & 0xff
     orr     r3, r0, r3, ror #2      // r3 <- ShiftRows^[-1](r2)
-    str.w   r3, [r12, #-32]
-    str.w   r12, [sp, #56]          // store the new rkeys address on the stack
+    ldr.w   r2, [r12, #4]!
+    str.w   r3, [r12, #-4]
+    subs    r1, #1
+    bne     loop_inv_sr_1
     bx      lr
 
 /******************************************************************************
-* Subroutine that XORs the columns after the S-box during the key schedule
-* round function, for rounds i such that (i % 4) == 2.
-* Note that the code size could be reduced at the cost of some instructions
-* since some redundant code is applied on different registers.
+* Applies ShiftRows^(-2) on a round key to match the fixsliced representation.
+* Only needed for the fully-fixsliced (ffs) representation.
 ******************************************************************************/
 .align 2
-xor_columns_2:
-    ldr     r12, [sp, #56]          // restore 'rkeys' address
-    ldr.w   r5, [r12, #28]          // load rkey word of rkey from prev round
-    str.w   r14, [sp, #52]          // store link register
-    movw    r4, #0xc0c0
-    movt    r4, #0xc0c0             // r4 <- 0xc0c0c0c0
-    eor     r11, r5, r11, ror #2    // r11<- r5 ^ (r11 >>> 2)
-    bic     r11, r4, r11            // r11<- ~r11 & 0xc0c0c0c0 (NOT omitted in sbox)
-    eor     r9, r5, r11, ror #2     // r9 <- r5 ^ (r11 >>> 2)
-    and     r9, r9, r4, ror #2      // r9 <- r9 & 0x30303030
-    orr     r11, r11, r9            // r11<- r11 | r9
-    eor     r9, r5, r11, ror #2     // r9 <- r5 ^ (r11 >>> 2)
-    and     r9, r9, r4, ror #4      // r9 <- r9 & 0x0c0c0c0c
-    orr     r11, r11, r9            // r11<- r11 | r9
-    eor     r9, r5, r11, ror #2     // r9 <- r5 ^ (r11 >>> 2)
-    and     r9, r9, r4, ror #6      // r9 <- r9 & 0x03030303
-    orr     r11, r11, r9            // r11<- r11 | r9
-    // applies ShiftRows^[-2]
+inv_shiftrows_2:
+    str     r14, [sp, #52]          // store link register
+    movw    r1, #8
+    sub     r12, #32
     movw    r14, #0x0f00
     movt    r14, #0x0f00            // r14<- 0x0f000f00 for ShiftRows^[-2]
-    and     r9, r14, r5, lsr #4     // r9 <- (r5 >> 4) & 0x0f000f00
-    and     r10, r14, r5            // r10<- r5 & 0x0f000f00
-    orr     r9, r9, r10, lsl #4     // r9 <- r9 | r10 << 4
-    eor     r10, r14, r14, lsl #4   // r10<- 0xff00ff00
-    and     r10, r5, r10, ror #8    // r10<- r5 & 0x00ff00f00
-    orr     r9, r9, r10             // r9 <- ShiftRows^[-2](r5)
-    mvn     r9, r9                  // NOT that is omitted in sbox
-    ldr.w   r5, [r12, #24]          // load rkey word of rkey from prev round
-    str     r9, [r12, #28]          // store the rkey word after ShiftRows^[-1]
-    str     r11, [r12, #60]         // store new rkey word in 'rkeys'
-    eor     r10, r5, r2, ror #2     // r10<- r5 ^ (r2 >>> 2)
-    bic     r10, r4, r10            // r10<- ~r10 & 0xc0c0c0c0 (NOT omitted in sbox)
-    eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
-    and     r9, r9, r4, ror #2      // r9 <- r9 & 0x30303030
-    orr     r10, r10, r9            // r10<- r10 | r9
-    eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
-    and     r9, r9, r4, ror #4      // r9 <- r9 & 0x0c0c0c0c
-    orr     r10, r10, r9            // r10<- r10 | r9
-    eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
-    and     r9, r9, r4, ror #6      // r9 <- r9 & 0x03030303
-    orr     r10, r10, r9            // r10<- r10 | r9
-    // applies ShiftRows^[-2]
-    and     r9, r14, r5, lsr #4     // r9 <- (r5 >> 4) & 0x0f000f00
-    and     r2, r14, r5             // r2 <- r5 & 0x0f000f00
-    orr     r9, r9, r2, lsl #4      // r9 <- r9 | r2 << 4
-    eor     r2, r14, r14, lsl #4    // r2 <- 0xff00ff00
-    and     r2, r5, r2, ror #8      // r2 <- r5 & 0x00ff00f00
-    orr     r5, r9, r2              // r9 <- ShiftRows^[-2](r5)
-    mvn     r5, r5                  // NOT that is omitted in sbox
-    ldr.w   r2, [r12, #20]          // load rkey word of rkey from prev round
-    str.w   r5, [r12, #24]          // store the rkey word after ShiftRows^[-1]
-    str     r10, [r12, #56]         // store new rkey word in 'rkeys'
-    eor     r9, r2, r0, ror #2      // r9 <- r2 ^ (r9 >>> 2)
-    and     r9, r4, r9              // r9 <- r9 & 0xc0c0c0c0
-    eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r9, r9, r0              // r9 <- r9 | r0
-    eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r9, r9, r0              // r9 <- r9 | r0
-    eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r9, r9, r0              // r9 <- r9 | r0
-    // applies ShiftRows^[-2]
-    and     r5, r14, r2, lsr #4     // r5 <- (r2 >> 4) & 0x0f000f00
-    and     r0, r14, r2             // r0 <- r2 & 0x0f000f00
-    orr     r5, r5, r0, lsl #4      // r5 <- r5 | r0 << 4
-    eor     r0, r14, r14, lsl #4    // r0 <- 0xff00ff00
-    and     r0, r2, r0, ror #8      // r0 <- r2 & 0x00ff00f00
-    orr     r5, r5, r0              // r5 <- ShiftRows^[-2](r2)
-    ldr.w   r2, [r12, #16]          // load rkey word of rkey from prev round
-    str.w   r5, [r12, #20]          // store the rkey word after ShiftRows^[-1]
-    str.w   r9, [r12, #52]          // store new rkey word in 'rkeys'
-    eor     r8, r2, r8, ror #2      // r8 <- r2 ^ (r8 >>> 2)
-    and     r8, r4, r8              // r8 <- r8 & 0xc0c0c0c0
-    eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r8, r8, r0              // r8 <- r8 | r0
-    eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r8, r8, r0              // r8 <- r8 | r0
-    eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r8, r8, r0              // r8 <- r8 | r0
-    // applies ShiftRows^[-2]
-    and     r5, r14, r2, lsr #4     // r5 <- (r2 >> 4) & 0x0f000f00
-    and     r0, r14, r2             // r0 <- r2 & 0x0f000f00
-    orr     r5, r5, r0, lsl #4      // r5 <- r5 | r0 << 4
-    eor     r0, r14, r14, lsl #4    // r0 <- 0xff00ff00
-    and     r0, r2, r0, ror #8      // r0 <- r2 & 0x00ff00f00
-    orr     r5, r5, r0              // r5 <- ShiftRows^[-2](r2)
-    ldr.w   r2, [r12, #12]          // load rkey word of rkey from prev round
-    str.w   r5, [r12, #16]          // store the rkey word after ShiftRows^[-1]
-    str.w   r8, [r12, #48]          // store new rkey word in 'rkeys'
-    eor     r7, r2, r7, ror #2      // r7 <- r2 ^ (r7 >>> 2)
-    and     r7, r4, r7              // r7 <- r7 & 0xc0c0c0c0
-    eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r7, r7, r0              // r7 <- r7 | r0
-    eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r7, r7, r0              // r7 <- r7 | r0
-    eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r7, r7, r0              // r7 <- r7 | r0
-    // applies ShiftRows^[-2]
-    and     r5, r14, r2, lsr #4     // r5 <- (r2 >> 4) & 0x0f000f00
-    and     r0, r14, r2             // r0 <- r2 & 0x0f000f00
-    orr     r5, r5, r0, lsl #4      // r5 <- r5 | r0 << 4
-    eor     r0, r14, r14, lsl #4    // r0 <- 0xff00ff00
-    and     r0, r2, r0, ror #8      // r0 <- r2 & 0x00ff00f00
-    orr     r5, r5, r0              // r5 <- ShiftRows^[-2](r2)
-    ldr.w   r2, [r12, #8]           // load rkey word of rkey from prev round
-    str.w   r5, [r12, #12]          // store the rkey word after ShiftRows^[-1]
-    str.w   r7, [r12, #44]          // store new rkey word in 'rkeys'
-    eor     r6, r2, r6, ror #2      // r6 <- r2 ^ (r6 >>> 2)
-    bic     r6, r4, r6              // r6 <- ~r6 & 0xc0c0c0c0 (NOT omitted in sbox)
-    eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r6, r6, r0              // r6 <- r6 | r0
-    eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r6, r6, r0              // r6 <- r6 | r0
-    eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r6, r6, r0              // r6 <- r6 | r0
-    // applies ShiftRows^[-2]
-    and     r5, r14, r2, lsr #4     // r5 <- (r2 >> 4) & 0x0f000f00
-    and     r0, r14, r2             // r0 <- r2 & 0x0f000f00
-    orr     r5, r5, r0, lsl #4      // r5 <- r5 | r0 << 4
-    eor     r0, r14, r14, lsl #4    // r0 <- 0xff00ff00
-    and     r0, r2, r0, ror #8      // r0 <- r2 & 0x00ff00f00
-    orr     r5, r5, r0              // r5 <- ShiftRows^[-2](r2)
-    mvn     r5, r5                  // NOT that is omitted in sbox
-    ldr.w   r2, [r12, #4]           // load rkey word of rkey from prev round
-    str.w   r5, [r12, #8]           // store the rkey word after ShiftRows^[-1]
-    str.w   r6, [r12, #40]          // store new rkey word in 'rkeys'
-    eor     r5, r2, r3, ror #2      // r5 <- r2 ^ (r3 >>> 2)
-    bic     r5, r4, r5              // r5 <- ~r5 & 0xc0c0c0c0 (NOT omitted in sbox)
-    eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r5, r5, r0              // r5 <- r5 | r0
-    eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r5, r5, r0              // r5 <- r5 | r0
-    eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r5, r5, r0              // r5 <- r5 | r0
-    // applies ShiftRows^[-2]
+loop_inv_sr_2:
+    ldr.w   r2, [r12]
     and     r3, r14, r2, lsr #4     // r3 <- (r2 >> 4) & 0x0f000f00
     and     r0, r14, r2             // r0 <- r2 & 0x0f000f00
     orr     r3, r3, r0, lsl #4      // r3 <- r3 | r0 << 4
     eor     r0, r14, r14, lsl #4    // r0 <- 0xff00ff00
-    and     r0, r2, r0, ror #8      // r0 <- r2 & 0x00ff00f00
+    and     r0, r2, r0, ror #8      // r0 <- r2 & 0xff00ff00
     orr     r3, r3, r0              // r3 <- ShiftRows^[-2](r2)
-    mvn     r3, r3                  // NOT that is omitted in sbox
-    ldr.w   r2, [r12], #32          // load rkey word of rkey from prev round
-    str.w   r3, [r12, #-28]         // store new rkey word in 'rkeys'
-    str.w   r5, [r12, #4]
-    eor     r3, r2, r1, ror #2      // r3 <- r2 ^ (r1 >>> 2)
-    and     r3, r4, r3              // r3 <- r3 & 0xc0c0c0c0
-    eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r3, r3, r0              // r3 <- r3 | r0
-    eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r3, r3, r0              // r3 <- r3 | r0
-    eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r4, r3, r0              // r4 <- r3 | r0
-    // applies ShiftRows^[-2]
-    and     r3, r14, r2, lsr #4     // r3 <- (r2 >> 4) & 0x0f000f00
-    and     r0, r14, r2             // r0 <- r2 & 0x0f000f00
-    orr     r3, r3, r0, lsl #4      // r3 <- r3 | r0 << 4
-    eor     r0, r14, r14, lsl #4    // r0 <- 0xff00ff00
-    and     r0, r2, r0, ror #8      // r0 <- r2 & 0x00ff00f00
-    orr     r3, r3, r0              // r3 <- ShiftRows^[-2](r2)
+    ldr.w   r2, [r12, #4]!
+    str.w   r3, [r12, #-4]
+    subs    r1, #1
+    bne     loop_inv_sr_2
     ldr     r14, [sp, #52]          // restore link register
-    str.w   r3, [r12, #-32]
-    str.w   r4, [r12]
-    str     r12, [sp, #56]          // store the new rkeys address on the stack
     bx      lr
 
 /******************************************************************************
-* Subroutine that XORs the columns after the S-box during the key schedule
-* round function, for rounds i such that (i % 4) == 3.
-* Note that the code size could be reduced at the cost of some instructions
-* since some redundant code is applied on different registers.
+* Applies ShiftRows^(-3) on a round key to match the fixsliced representation.
+* Only needed for the fully-fixsliced (ffs) representation.
 ******************************************************************************/
 .align 2
-xor_columns_3:
-    ldr     r12, [sp, #56]          // restore 'rkeys' address
-    ldr.w   r5, [r12, #28]          // load rkey word of rkey from prev round
-    movw    r4, #0xc0c0
-    movt    r4, #0xc0c0             // r4 <- 0xc0c0c0c0
-    eor     r11, r5, r11, ror #2    // r11<- r5 ^ (r11 >>> 2)
-    bic     r11, r4, r11            // r11<- ~r11 & 0xc0c0c0c0 (NOT omitted in sbox)
-    eor     r9, r5, r11, ror #2     // r9 <- r5 ^ (r11 >>> 2)
-    and     r9, r9, r4, ror #2      // r9 <- r9 & 0x30303030
-    orr     r11, r11, r9            // r11<- r11 | r9
-    eor     r9, r5, r11, ror #2     // r9 <- r5 ^ (r11 >>> 2)
-    and     r9, r9, r4, ror #4      // r9 <- r9 & 0x0c0c0c0c
-    orr     r11, r11, r9            // r11<- r11 | r9
-    eor     r9, r5, r11, ror #2     // r9 <- r5 ^ (r11 >>> 2)
-    and     r9, r9, r4, ror #6      // r9 <- r9 & 0x03030303
-    orr     r11, r11, r9            // r11<- r11 | r9
-    // applies ShiftRows^[-3]
-    and     r9, r5, #0xc000         // r9 <- r5 & 0x0000c000
-    and     r10, r5, #0x3f00        // r10<- r5 & 0x00003f00
-    orr     r9, r9, r10, lsl #8     // r9 <- r9 | r10 << 8
-    and     r10, r5, #0xf00000      // r10<- r5 & 0x00f00000
-    orr     r9, r9, r10, lsl #2     // r9 <- r9 | r10 << 2
-    and     r10, r5, #0xf0000       // r10<- r5 & 0x000f0000
-    orr     r9, r9, r10, lsl #10    // r9 <- r9 | r10 << 10
-    and     r10, r5, #0xfc000000    // r10<- r5 & 0xfc000000
-    orr     r9, r9, r10, ror #28     // r9 <- r9 | r10 >>> 8
-    and     r10, r5, #0x03000000    // r10<- r5 & 0x03000000
-    orr     r9, r9, r10, ror #20    // r9 <- r9 | (r10 >>> 20)
-    and     r10, r5, #0xff          // r10<- r5 & 0xff
-    orr     r9, r10, r9, ror #6     // r9 <- ShiftRows^[-3](r5)
-    mvn     r9, r9                  // NOT that is omitted in sbox
-    ldr.w   r5, [r12, #24]          // load rkey word of rkey from prev round
-    str     r9, [r12, #28]          // store the rkey word after ShiftRows^[-1]
-    str     r11, [r12, #60]         // store new rkey word in 'rkeys'
-    eor     r10, r5, r2, ror #2     // r10<- r5 ^ (r2 >>> 2)
-    bic     r10, r4, r10            // r10<- ~r10 & 0xc0c0c0c0 (NOT omitted in sbox)
-    eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
-    and     r9, r9, r4, ror #2      // r9 <- r9 & 0x30303030
-    orr     r10, r10, r9            // r10<- r10 | r9
-    eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
-    and     r9, r9, r4, ror #4      // r9 <- r9 & 0x0c0c0c0c
-    orr     r10, r10, r9            // r10<- r10 | r9
-    eor     r9, r5, r10, ror #2     // r9 <- r5 ^ (r10 >>> 2)
-    and     r9, r9, r4, ror #6      // r9 <- r9 & 0x03030303
-    orr     r10, r10, r9            // r10<- r10 | r9
-    // applies ShiftRows^[-3]
-    and     r9, r5, #0xc000         // r9 <- r5 & 0x0000c000
-    and     r2, r5, #0x3f00         // r2 <- r5 & 0x00003f00
-    orr     r9, r9, r2, lsl #8      // r9 <- r9 | r2 << 8
-    and     r2, r5, #0xf00000       // r2 <- r5 & 0x00f00000
-    orr     r9, r9, r2, lsl #2      // r9 <- r9 | r2 << 2
-    and     r2, r5, #0xf0000        // r2 <- r5 & 0x000f0000
-    orr     r9, r9, r2, lsl #10     // r9 <- r9 | r2 << 10
-    and     r2, r5, #0xfc000000     // r2 <- r5 & 0xfc000000
-    orr     r9, r9, r2, ror #28     // r9 <- r9 | r2 >>> 8
-    and     r2, r5, #0x03000000     // r2 <- r5 & 0x03000000
-    orr     r9, r9, r2, ror #20     // r9 <- r9 | (r2 >>> 20)
-    and     r2, r5, #0xff           // r2 <- r5 & 0xff
-    orr     r5, r2, r9, ror #6      // r5 <- ShiftRows^[-3](r5)
-    mvn     r5, r5                  // NOT that is omitted in sbox
-    ldr.w   r2, [r12, #20]          // load rkey word of rkey from prev round
-    str.w   r5, [r12, #24]          // store the rkey word after ShiftRows^[-1]
-    str     r10, [r12, #56]         // store new rkey word in 'rkeys'
-    eor     r9, r2, r0, ror #2      // r9 <- r2 ^ (r9 >>> 2)
-    and     r9, r4, r9              // r9 <- r9 & 0xc0c0c0c0
-    eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r9, r9, r0              // r9 <- r9 | r0
-    eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r9, r9, r0              // r9 <- r9 | r0
-    eor     r0, r2, r9, ror #2      // r0 <- r2 ^ (r9 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r9, r9, r0              // r9 <- r9 | r0
-    // applies ShiftRows^[-3]
-    and     r5, r2, #0xc000         // r5 <- r2 & 0x0000c000
-    and     r0, r2, #0x3f00         // r0 <- r2 & 0x00003f00
-    orr     r5, r5, r0, lsl #8      // r5 <- r5 | r0 << 8
-    and     r0, r2, #0xf00000       // r0 <- r2 & 0x00f00000
-    orr     r5, r5, r0, lsl #2      // r5 <- r5 | r0 << 2
-    and     r0, r2, #0xf0000        // r0 <- r2 & 0x000f0000
-    orr     r5, r5, r0, lsl #10     // r5 <- r5 | r0 << 10
-    and     r0, r2, #0xfc000000     // r0 <- r2 & 0xfc000000
-    orr     r5, r5, r0, ror #28     // r5 <- r5 | r0 >>> 8
-    and     r0, r2, #0x03000000     // r0 <- r2 & 0x03000000
-    orr     r5, r5, r0, ror #20     // r5 <- r5 | (r0 >>> 20)
-    and     r0, r2, #0xff           // r0 <- r2 & 0xff
-    orr     r5, r0, r5, ror #6      // r5 <- ShiftRows^[-3](r2)
-    ldr.w   r2, [r12, #16]          // load rkey word of rkey from prev round
-    str.w   r5, [r12, #20]          // store the rkey word after ShiftRows^[-1]
-    str.w   r9, [r12, #52]          // store new rkey word in 'rkeys'
-    eor     r8, r2, r8, ror #2      // r8 <- r2 ^ (r8 >>> 2)
-    and     r8, r4, r8              // r8 <- r8 & 0xc0c0c0c0
-    eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r8, r8, r0              // r8 <- r8 | r0
-    eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r8, r8, r0              // r8 <- r8 | r0
-    eor     r0, r2, r8, ror #2      // r0 <- r2 ^ (r8 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r8, r8, r0              // r8 <- r8 | r0
-    // applies ShiftRows^[-3]
-    and     r5, r2, #0xc000         // r5 <- r2 & 0x0000c000
-    and     r0, r2, #0x3f00         // r0 <- r2 & 0x00003f00
-    orr     r5, r5, r0, lsl #8      // r5 <- r5 | r0 << 8
-    and     r0, r2, #0xf00000       // r0 <- r2 & 0x00f00000
-    orr     r5, r5, r0, lsl #2      // r5 <- r5 | r0 << 2
-    and     r0, r2, #0xf0000        // r0 <- r2 & 0x000f0000
-    orr     r5, r5, r0, lsl #10     // r5 <- r5 | r0 << 10
-    and     r0, r2, #0xfc000000     // r0 <- r2 & 0xfc000000
-    orr     r5, r5, r0, ror #28     // r5 <- r5 | r0 >>> 8
-    and     r0, r2, #0x03000000     // r0 <- r2 & 0x03000000
-    orr     r5, r5, r0, ror #20     // r5 <- r5 | (r0 >>> 20)
-    and     r0, r2, #0xff           // r0 <- r2 & 0xff
-    orr     r5, r0, r5, ror #6      // r5 <- ShiftRows^[-3](r2)
-    ldr.w   r2, [r12, #12]          // load rkey word of rkey from prev round
-    str.w   r5, [r12, #16]          // store the rkey word after ShiftRows^[-1]
-    str.w   r8, [r12, #48]          // store new rkey word in 'rkeys'
-    eor     r7, r2, r7, ror #2      // r7 <- r2 ^ (r7 >>> 2)
-    and     r7, r4, r7              // r7 <- r7 & 0xc0c0c0c0
-    eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r7, r7, r0              // r7 <- r7 | r0
-    eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r7, r7, r0              // r7 <- r7 | r0
-    eor     r0, r2, r7, ror #2      // r0 <- r2 ^ (r7 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r7, r7, r0              // r7 <- r7 | r0
-    // applies ShiftRows^[-3]
-    and     r5, r2, #0xc000         // r5 <- r2 & 0x0000c000
-    and     r0, r2, #0x3f00         // r0 <- r2 & 0x00003f00
-    orr     r5, r5, r0, lsl #8      // r5 <- r5 | r0 << 8
-    and     r0, r2, #0xf00000       // r0 <- r2 & 0x00f00000
-    orr     r5, r5, r0, lsl #2      // r5 <- r5 | r0 << 2
-    and     r0, r2, #0xf0000        // r0 <- r2 & 0x000f0000
-    orr     r5, r5, r0, lsl #10     // r5 <- r5 | r0 << 10
-    and     r0, r2, #0xfc000000     // r0 <- r2 & 0xfc000000
-    orr     r5, r5, r0, ror #28     // r5 <- r5 | r0 >>> 8
-    and     r0, r2, #0x03000000     // r0 <- r2 & 0x03000000
-    orr     r5, r5, r0, ror #20     // r5 <- r5 | (r0 >>> 20)
-    and     r0, r2, #0xff           // r0 <- r2 & 0xff
-    orr     r5, r0, r5, ror #6      // r5 <- ShiftRows^[-3](r2)
-    ldr.w   r2, [r12, #8]           // load rkey word of rkey from prev round
-    str.w   r5, [r12, #12]          // store the rkey word after ShiftRows^[-1]
-    str.w   r7, [r12, #44]          // store new rkey word in 'rkeys'
-    eor     r6, r2, r6, ror #2      // r6 <- r2 ^ (r6 >>> 2)
-    bic     r6, r4, r6              // r6 <- ~r6 & 0xc0c0c0c0 (NOT omitted in sbox)
-    eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r6, r6, r0              // r6 <- r6 | r0
-    eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r6, r6, r0              // r6 <- r6 | r0
-    eor     r0, r2, r6, ror #2      // r0 <- r2 ^ (r6 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r6, r6, r0              // r6 <- r6 | r0
-    // applies ShiftRows^[-3]
-    and     r5, r2, #0xc000         // r5 <- r2 & 0x0000c000
-    and     r0, r2, #0x3f00         // r0 <- r2 & 0x00003f00
-    orr     r5, r5, r0, lsl #8      // r5 <- r5 | r0 << 8
-    and     r0, r2, #0xf00000       // r0 <- r2 & 0x00f00000
-    orr     r5, r5, r0, lsl #2      // r5 <- r5 | r0 << 2
-    and     r0, r2, #0xf0000        // r0 <- r2 & 0x000f0000
-    orr     r5, r5, r0, lsl #10     // r5 <- r5 | r0 << 10
-    and     r0, r2, #0xfc000000     // r0 <- r2 & 0xfc000000
-    orr     r5, r5, r0, ror #28     // r5 <- r5 | r0 >>> 8
-    and     r0, r2, #0x03000000     // r0 <- r2 & 0x03000000
-    orr     r5, r5, r0, ror #20     // r5 <- r5 | (r0 >>> 20)
-    and     r0, r2, #0xff           // r0 <- r2 & 0xff
-    orr     r5, r0, r5, ror #6      // r5 <- ShiftRows^[-3](r2)
-    mvn     r5, r5                  // NOT omitted in sbox
-    ldr.w   r2, [r12, #4]           // load rkey word of rkey from prev round
-    str.w   r5, [r12, #8]           // store the rkey word after ShiftRows^[-1]
-    str.w   r6, [r12, #40]          // store new rkey word in 'rkeys'
-    eor     r5, r2, r3, ror #2      // r5 <- r2 ^ (r3 >>> 2)
-    bic     r5, r4, r5              // r5 <- ~r5 & 0xc0c0c0c0 (NOT omitted in sbox)
-    eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r5, r5, r0              // r5 <- r5 | r0
-    eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r5, r5, r0              // r5 <- r5 | r0
-    eor     r0, r2, r5, ror #2      // r0 <- r2 ^ (r5 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r5, r5, r0              // r5 <- r5 | r0
-    // applies ShiftRows^[-3]
+inv_shiftrows_3:
+    movw    r1, #8
+    sub.w   r12, #32
+loop_inv_sr_3:
+    ldr.w   r2, [r12]
     and     r3, r2, #0xc000         // r3 <- r2 & 0x0000c000
     and     r0, r2, #0x3f00         // r0 <- r2 & 0x00003f00
     orr     r3, r3, r0, lsl #8      // r3 <- r3 | r0 << 8
@@ -997,38 +688,10 @@ xor_columns_3:
     orr     r3, r3, r0, ror #20     // r3 <- r3 | (r0 >>> 20)
     and     r0, r2, #0xff           // r0 <- r2 & 0xff
     orr     r3, r0, r3, ror #6      // r3 <- ShiftRows^[-3](r2)
-    mvn     r3, r3                  // NOT omitted in sbox
-    ldr.w   r2, [r12], #32          // load rkey word of rkey from prev round
-    str.w   r3, [r12, #-28]         // store new rkey word in 'rkeys'
-    str.w   r5, [r12, #4]
-    eor     r3, r2, r1, ror #2      // r3 <- r2 ^ (r1 >>> 2)
-    and     r3, r4, r3              // r3 <- r3 & 0xc0c0c0c0
-    eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
-    and     r0, r0, r4, ror #2      // r0 <- r0 & 0x30303030
-    orr     r3, r3, r0              // r3 <- r3 | r0
-    eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
-    and     r0, r0, r4, ror #4      // r0 <- r0 & 0x0c0c0c0c
-    orr     r3, r3, r0              // r3 <- r3 | r0
-    eor     r0, r2, r3, ror #2      // r0 <- r2 ^ (r3 >>> 2)
-    and     r0, r0, r4, ror #6      // r0 <- r0 & 0x03030303
-    orr     r4, r3, r0              // r4 <- r3 | r0
-    str.w   r4, [r12]
-    // applies ShiftRows^[-3]
-    and     r3, r2, #0xc000         // r3 <- r2 & 0x0000c000
-    and     r0, r2, #0x3f00         // r0 <- r2 & 0x00003f00
-    orr     r3, r3, r0, lsl #8      // r3 <- r3 | r0 << 8
-    and     r0, r2, #0xf00000       // r0 <- r2 & 0x00f00000
-    orr     r3, r3, r0, lsl #2      // r3 <- r3 | r0 << 2
-    and     r0, r2, #0xf0000        // r0 <- r2 & 0x000f0000
-    orr     r3, r3, r0, lsl #10     // r3 <- r3 | r0 << 10
-    and     r0, r2, #0xfc000000     // r0 <- r2 & 0xfc000000
-    orr     r3, r3, r0, ror #28     // r3 <- r3 | r0 >>> 8
-    and     r0, r2, #0x03000000     // r0 <- r2 & 0x03000000
-    orr     r3, r3, r0, ror #20     // r3 <- r3 | (r0 >>> 20)
-    and     r0, r2, #0xff           // r0 <- r2 & 0xff
-    orr     r3, r0, r3, ror #6      // r3 <- ShiftRows^[-3](r2)
-    str.w   r3, [r12, #-32]
-    str.w   r12, [sp, #56]          // store the new rkeys address on the stack
+    ldr.w   r2, [r12, #4]!
+    str.w   r3, [r12, #-4]
+    subs    r1, #1
+    bne     loop_inv_sr_3
     bx      lr
 
 /******************************************************************************
@@ -1050,52 +713,59 @@ aes128_keyschedule_ffs:
     stm     r0, {r4-r11}            // store the packed master key in 'rkeys'
     bl      sbox                    // apply the sbox to the master key
     eor     r11, r11, #0x00000300   // add the 1st rconst
-    bl      xor_columns_0
+    bl      aes128_xorcolumns_rotword
     bl      sbox                    // apply the sbox to the master key
     eor     r2, r2, #0x00000300     // add the 2nd rconst
-    bl      xor_columns_1
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_1
     bl      sbox                    // apply the sbox to the master key
     eor     r0, r0, #0x00000300     // add the 3rd rconst
-    bl      xor_columns_2
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_2
     bl      sbox                    // apply the sbox to the master key
     eor     r8, r8, #0x00000300     // add the 4th rconst
-    bl      xor_columns_3
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_3
     bl      sbox                    // apply the sbox to the master key
     eor     r7, r7, #0x00000300     // add the 5th rconst
-    bl      xor_columns_0
+    bl      aes128_xorcolumns_rotword
     bl      sbox                    // apply the sbox to the master key
     eor     r6, r6, #0x00000300     // add the 6th rconst
-    bl      xor_columns_1
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_1
     bl      sbox                    // apply the sbox to the master key
     eor     r3, r3, #0x00000300     // add the 7th rconst
-    bl      xor_columns_2
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_2
     bl      sbox                    // apply the sbox to the master key
     eor     r1, r1, #0x00000300     // add the 8th rconst
-    bl      xor_columns_3
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_3
     bl      sbox                    // apply the sbox to the master key
     eor     r11, r11, #0x00000300   // add the 9th rconst
     eor     r2, r2, #0x00000300     // add the 9th rconst
     eor     r8, r8, #0x00000300     // add the 9th rconst
     eor     r7, r7, #0x00000300     // add the 9th rconst
-    bl      xor_columns_0
+    bl      aes128_xorcolumns_rotword
     bl      sbox                    // apply the sbox to the master key
     eor     r2, r2, #0x00000300     // add the 10th rconst
     eor     r0, r0, #0x00000300     // add the 10th rconst
     eor     r7, r7, #0x00000300     // add the 10th rconst
     eor     r6, r6, #0x00000300     // add the 10th rconst
-    bl      xor_columns_1
-    mvn     r5, r5                  // add the NOT omitted on sbox for the last rkey
-    mvn     r6, r6                  // add the NOT omitted on sbox for the last rkey
-    mvn     r10, r10                // add the NOT omitted on sbox for the last rkey
-    mvn     r11, r11                // add the NOT omitted on sbox for the last rkey
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_1
+    mvn     r5, r5                  // add the NOT for the last rkey
+    mvn     r6, r6                  // add the NOT for the last rkey
+    mvn     r10, r10                // add the NOT for the last rkey
+    mvn     r11, r11                // add the NOT for the last rkey
     strd    r5, r6, [r12, #4]
     strd    r10, r11, [r12, #24]
     ldrd    r0, r1, [r12, #-316]
     ldrd    r2, r3, [r12, #-296]
-    mvn     r0, r0                  // remove the NOT omitted on sbox for the master rkey
-    mvn     r1, r1                  // remove the NOT omitted on sbox for the master rkey
-    mvn     r2, r2                  // remove the NOT omitted on sbox for the master rkey
-    mvn     r3, r3                  // remove the NOT omitted on sbox for the master rkey
+    mvn     r0, r0                  // remove the NOT for the key whitening
+    mvn     r1, r1                  // remove the NOT for the key whitening
+    mvn     r2, r2                  // remove the NOT for the key whitening
+    mvn     r3, r3                  // remove the NOT for the key whitening
     strd    r0, r1, [r12, #-316]
     strd    r2, r3, [r12, #-296]
     add.w   sp, #56                 // restore stack
@@ -1103,9 +773,103 @@ aes128_keyschedule_ffs:
     bx      lr
 
 /******************************************************************************
+* Fully bitsliced AES-256 key schedule to match the fully-fixsliced (ffs)
+* representation. Note that it is possible to pass 2 different keys as input
+* parameters if one wants to encrypt 2 blocks in with 2 different keys.
+******************************************************************************/
+@ void aes256_keyschedule_ffs(u32* rkeys, const u8* key);
+.global aes256_keyschedule_ffs
+.type   aes256_keyschedule_ffs,%function
+.align 2
+aes256_keyschedule_ffs:
+    push    {r0-r12,r14}
+    sub.w   sp, #56                 // allow space on the stack for tmp var
+    ldm     r1, {r4-r7}             // load the 128 first key bits in r4-r7
+    ldm     r1, {r8-r11}            // load the 128 first key bits in r8-r11
+    bl      packing                 // pack the master key
+    ldrd    r0,r1, [sp, #56]        // restore 'rkeys' and 'key' addresses
+    stm     r0, {r4-r11}            // store the packed master key in 'rkeys'
+    add.w   r1, #16                 // points to the 128 last bits of the key
+    ldm     r1, {r4-r7}             // load the 128 first key bits in r4-r7
+    ldm     r1, {r8-r11}            // load the 128 first key bits in r8-r11
+    bl      packing                 // pack the master key
+    ldr.w   r0, [sp, #56]           // restore 'rkeys' address
+    add.w   r0, #32                 // points to the 128 last bits of the key
+    stm     r0, {r4-r11}            // store the packed master key in 'rkeys'
+    bl      sbox                    // apply the sbox to the master key
+    eor     r11, r11, #0x00000300   // add the 1st rconst
+    bl      aes256_xorcolumns_rotword
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_1
+    bl      sbox                    // apply the sbox to the master key
+    eor     r2, r2, #0x00000300     // add the 2nd rconst
+    bl      aes256_xorcolumns_rotword
+    bl      inv_shiftrows_2
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_3
+    bl      sbox                    // apply the sbox to the master key
+    eor     r0, r0, #0x00000300     // add the 3rd rconst
+    bl      aes256_xorcolumns_rotword
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_1
+    bl      sbox                    // apply the sbox to the master key
+    eor     r8, r8, #0x00000300     // add the 4th rconst
+    bl      aes256_xorcolumns_rotword
+    bl      inv_shiftrows_2
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_3
+    bl      sbox                    // apply the sbox to the master key
+    eor     r7, r7, #0x00000300     // add the 5th rconst
+    bl      aes256_xorcolumns_rotword
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_1
+    bl      sbox                    // apply the sbox to the master key
+    eor     r6, r6, #0x00000300     // add the 6th rconst
+    bl      aes256_xorcolumns_rotword
+    bl      inv_shiftrows_2
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_3
+    bl      sbox                    // apply the sbox to the master key
+    eor     r3, r3, #0x00000300     // add the 6th rconst
+    bl      aes256_xorcolumns_rotword
+    add     r12, #32
+    bl      inv_shiftrows_1
+    mvn     r5, r5                  // add the NOT for the last rkey
+    mvn     r6, r6                  // add the NOT for the last rkey
+    mvn     r10, r10                // add the NOT for the last rkey
+    mvn     r11, r11                // add the NOT for the last rkey
+    ldrd    r0, r1, [r12, #-28]
+    ldrd    r2, r3, [r12, #-8]
+    strd    r5, r6, [r12, #4]
+    strd    r10, r11, [r12, #24]
+    mvn     r0, r0                  // add the NOT for the penultimate rkey
+    mvn     r1, r1                  // add the NOT for the penultimate rkey
+    mvn     r2, r2                  // add the NOT for the penultimate rkey
+    mvn     r3, r3                  // add the NOT for the penultimate rkey
+    ldrd    r5, r6, [r12, #-444]
+    ldrd    r10, r11, [r12, #-424]
+    strd    r0, r1, [r12, #-28]
+    strd    r2, r3, [r12, #-8]
+    mvn     r5, r5                  // remove the NOT for the key whitening
+    mvn     r6, r6                  // remove the NOT for the key whitening
+    mvn     r10, r10                // remove the NOT for the key whitening
+    mvn     r11, r11                // remove the NOT for the key whitening
+    strd    r5, r6, [r12, #-444]
+    strd    r10, r11, [r12, #-424]
+    add.w   sp, #56                 // restore stack
+    pop     {r0-r12, r14}           // restore context
+    bx      lr
+
+/******************************************************************************
 * Fully bitsliced AES-128 key schedule to match the semi-fixsliced (sfs)
-* representation. Note that it is possible to pass two different keys as input
-* parameters if one wants to encrypt 2 blocks in with two different keys.
+* representation. Note that it is possible to pass 2 different keys as input
+* parameters if one wants to encrypt 2 blocks in with 2 different keys.
 ******************************************************************************/
 @ void aes128_keyschedule_sfs(u32* rkeys, const u8* key);
 .global aes128_keyschedule_sfs
@@ -1121,54 +885,150 @@ aes128_keyschedule_sfs:
     stm     r0, {r4-r11}            // store the packed master key in 'rkeys'
     bl      sbox                    // apply the sbox to the master key
     eor     r11, r11, #0x00000300   // add the 1st rconst
-    bl      xor_columns_0
+    bl      aes128_xorcolumns_rotword
     bl      sbox                    // apply the sbox to the master key
     eor     r2, r2, #0x00000300     // add the 2nd rconst
-    bl      xor_columns_1
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_1
     bl      sbox                    // apply the sbox to the master key
     eor     r0, r0, #0x00000300     // add the 3rd rconst
-    bl      xor_columns_0
+    bl      aes128_xorcolumns_rotword
     bl      sbox                    // apply the sbox to the master key
     eor     r8, r8, #0x00000300     // add the 4th rconst
-    bl      xor_columns_1
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_1
     bl      sbox                    // apply the sbox to the master key
     eor     r7, r7, #0x00000300     // add the 5th rconst
-    bl      xor_columns_0
+    bl      aes128_xorcolumns_rotword
     bl      sbox                    // apply the sbox to the master key
     eor     r6, r6, #0x00000300     // add the 6th rconst
-    bl      xor_columns_1
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_1
     bl      sbox                    // apply the sbox to the master key
     eor     r3, r3, #0x00000300     // add the 7th rconst
-    bl      xor_columns_0
+    bl      aes128_xorcolumns_rotword
     bl      sbox                    // apply the sbox to the master key
     eor     r1, r1, #0x00000300     // add the 8th rconst
-    bl      xor_columns_1
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_1
     bl      sbox                    // apply the sbox to the master key
     eor     r11, r11, #0x00000300   // add the 9th rconst
     eor     r2, r2, #0x00000300     // add the 9th rconst
     eor     r8, r8, #0x00000300     // add the 9th rconst
     eor     r7, r7, #0x00000300     // add the 9th rconst
-    bl      xor_columns_0
+    bl      aes128_xorcolumns_rotword
     bl      sbox                    // apply the sbox to the master key
     eor     r2, r2, #0x00000300     // add the 10th rconst
     eor     r0, r0, #0x00000300     // add the 10th rconst
     eor     r7, r7, #0x00000300     // add the 10th rconst
     eor     r6, r6, #0x00000300     // add the 10th rconst
-    bl      xor_columns_1
-    mvn     r5, r5                  // add the NOT omitted on sbox for the last rkey
-    mvn     r6, r6                  // add the NOT omitted on sbox for the last rkey
-    mvn     r10, r10                // add the NOT omitted on sbox for the last rkey
-    mvn     r11, r11                // add the NOT omitted on sbox for the last rkey
+    bl      aes128_xorcolumns_rotword
+    bl      inv_shiftrows_1
+    mvn     r5, r5                  // add the NOT for the last rkey
+    mvn     r6, r6                  // add the NOT for the last rkey
+    mvn     r10, r10                // add the NOT for the last rkey
+    mvn     r11, r11                // add the NOT for the last rkey
     strd    r5, r6, [r12, #4]
     strd    r10, r11, [r12, #24]
     ldrd    r0, r1, [r12, #-316]
     ldrd    r2, r3, [r12, #-296]
-    mvn     r0, r0                  // remove the NOT omitted on sbox for the master rkey
-    mvn     r1, r1                  // remove the NOT omitted on sbox for the master rkey
-    mvn     r2, r2                  // remove the NOT omitted on sbox for the master rkey
-    mvn     r3, r3                  // remove the NOT omitted on sbox for the master rkey
+    mvn     r0, r0                  // remove the NOT for the key whitening
+    mvn     r1, r1                  // remove the NOT for the key whitening
+    mvn     r2, r2                  // remove the NOT for the key whitening
+    mvn     r3, r3                  // remove the NOT for the key whitening
     strd    r0, r1, [r12, #-316]
     strd    r2, r3, [r12, #-296]
+    add.w   sp, #56                 // restore stack
+    pop     {r0-r12, r14}           // restore context
+    bx      lr
+
+/******************************************************************************
+* Fully bitsliced AES-256 key schedule to match the semi-fixsliced (sfs)
+* representation. Note that it is possible to pass 2 different keys as input
+* parameters if one wants to encrypt 2 blocks in with 2 different keys.
+******************************************************************************/
+@ void aes256_keyschedule_sfs(u32* rkeys, const u8* key);
+.global aes256_keyschedule_sfs
+.type   aes256_keyschedule_sfs,%function
+.align 2
+aes256_keyschedule_sfs:
+    push    {r0-r12,r14}
+    sub.w   sp, #56                 // allow space on the stack for tmp var
+    ldm     r1, {r4-r7}             // load the 128 first key bits in r4-r7
+    ldm     r1, {r8-r11}            // load the 128 first key bits in r8-r11
+    bl      packing                 // pack the master key
+    ldrd    r0,r1, [sp, #56]        // restore 'rkeys' and 'key' addresses
+    stm     r0, {r4-r11}            // store the packed master key in 'rkeys'
+    add.w   r1, #16                 // points to the 128 last bits of the key
+    ldm     r1, {r4-r7}             // load the 128 first key bits in r4-r7
+    ldm     r1, {r8-r11}            // load the 128 first key bits in r8-r11
+    bl      packing                 // pack the master key
+    ldr.w   r0, [sp, #56]           // restore 'rkeys' address
+    add.w   r0, #32                 // points to the 128 last bits of the key
+    stm     r0, {r4-r11}            // store the packed master key in 'rkeys'
+    bl      sbox                    // apply the sbox to the master key
+    eor     r11, r11, #0x00000300   // add the 1st rconst
+    bl      aes256_xorcolumns_rotword
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_1
+    bl      sbox                    // apply the sbox to the master key
+    eor     r2, r2, #0x00000300     // add the 2nd rconst
+    bl      aes256_xorcolumns_rotword
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_1
+    bl      sbox                    // apply the sbox to the master key
+    eor     r0, r0, #0x00000300     // add the 3rd rconst
+    bl      aes256_xorcolumns_rotword
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_1
+    bl      sbox                    // apply the sbox to the master key
+    eor     r8, r8, #0x00000300     // add the 4th rconst
+    bl      aes256_xorcolumns_rotword
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_1
+    bl      sbox                    // apply the sbox to the master key
+    eor     r7, r7, #0x00000300     // add the 5th rconst
+    bl      aes256_xorcolumns_rotword
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_1
+    bl      sbox                    // apply the sbox to the master key
+    eor     r6, r6, #0x00000300     // add the 6th rconst
+    bl      aes256_xorcolumns_rotword
+    bl      sbox                    // apply the sbox to the master key
+    bl      aes256_xorcolumns
+    bl      inv_shiftrows_1
+    bl      sbox                    // apply the sbox to the master key
+    eor     r3, r3, #0x00000300     // add the 6th rconst
+    bl      aes256_xorcolumns_rotword
+    add     r12, #32
+    bl      inv_shiftrows_1
+    mvn     r5, r5                  // add the NOT for the last rkey
+    mvn     r6, r6                  // add the NOT for the last rkey
+    mvn     r10, r10                // add the NOT for the last rkey
+    mvn     r11, r11                // add the NOT for the last rkey
+    ldrd    r0, r1, [r12, #-28]
+    ldrd    r2, r3, [r12, #-8]
+    strd    r5, r6, [r12, #4]
+    strd    r10, r11, [r12, #24]
+    mvn     r0, r0                  // add the NOT for the penultimate rkey
+    mvn     r1, r1                  // add the NOT for the penultimate rkey
+    mvn     r2, r2                  // add the NOT for the penultimate rkey
+    mvn     r3, r3                  // add the NOT for the penultimate rkey
+    ldrd    r5, r6, [r12, #-444]
+    ldrd    r10, r11, [r12, #-424]
+    strd    r0, r1, [r12, #-28]
+    strd    r2, r3, [r12, #-8]
+    mvn     r5, r5                  // remove the NOT for the key whitening
+    mvn     r6, r6                  // remove the NOT for the key whitening
+    mvn     r10, r10                // remove the NOT for the key whitening
+    mvn     r11, r11                // remove the NOT for the key whitening
+    strd    r5, r6, [r12, #-444]
+    strd    r10, r11, [r12, #-424]
     add.w   sp, #56                 // restore stack
     pop     {r0-r12, r14}           // restore context
     bx      lr

@@ -1,14 +1,14 @@
 /******************************************************************************
-* ARM assembly implementations of the AES-128 key schedule to match the barrel-
-* shiftrows representation. Note that those implementations rely on Look-Up 
-* Tables (LUT).
+* Assembly implementations of the AES-128 and AES-256 key schedules to match
+* the barrel-shiftrows representation. Note that those implementations rely on
+* Look-Up Tables (LUT).
 *
 * See the paper available at https:// for more details.
 *
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     July 2020
+* @date     August 2020
 ******************************************************************************/
 
 .syntax unified
@@ -78,13 +78,93 @@ keyschedule_round_func:
     strd    r6, r7, [sp], #8        // store on the stack for bitslicing
     bx      lr
 
+/******************************************************************************
+* Double round function of the AES-256 key expansion.
+* Note that it expects r2 to contain the corresponding round constant and r3 to
+* contain the S-box address.
+* Operates slightly differently than 'aes128_keyschedule_rfunc' as 8 words have
+* to be maintained in registers (instead of 4).
+******************************************************************************/
+.align 2
+aes256_keyschedule_rfunc_0:
+    eor     r4, r2                  // adds the first rconst
+    movw    r1, #0xfc
+    movw    r2, #0x18
+    and     r12, r1, r11, lsr #8
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r11, lsr #5     
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r4, r12                 // xor the columns (sbox output byte)
+    and     r12, r1, r11, lsr #16
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r11, lsr #13
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r4, r4, r12, ror #24    // xor the columns (sbox output byte)
+    and     r12, r1, r11, lsr #24
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r11, lsr #21
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r4, r4, r12, ror #16    // xor the columns (sbox output byte)
+    and     r12, r1, r11
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r11, lsl #3
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r4, r4, r12, ror #8     // xor the columns (sbox output byte)
+    eor     r5, r4                  // xor the columns
+    eor     r6, r5                  // xor the columns
+    eor     r7, r6                  // xor the columns
+    strd    r4, r5, [sp], #8        // store on the stack for bitslicing
+    strd    r6, r7, [sp], #8        // store on the stack for bitslicing
+    bx      lr
+
+/******************************************************************************
+* Double round function of the AES-256 key expansion.
+* Note that it expects r2 to contain the corresponding round constant and r3 to
+* contain the S-box address.
+* Unlike 'aes256_keyschedule_rfunc_0' it doesnt compute the RotWord operation.
+******************************************************************************/
+aes256_keyschedule_rfunc_1:
+    and     r12, r1, r7, lsr #8
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r7, lsr #5     
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r8, r8, r12, lsl #8     // xor the columns (sbox output byte)
+    and     r12, r1, r7, lsr #16
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r7, lsr #13
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r8, r8, r12, lsl #16    // xor the columns (sbox output byte)
+    and     r12, r1, r7, lsr #24
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r7, lsr #21
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r8, r8, r12, lsl #24    // xor the columns (sbox output byte)
+    and     r12, r1, r7
+    ldr     r12, [r3, r12]          // computes the sbox using the LUT
+    and     r0, r2, r7, lsl #3
+    lsr     r12, r12, r0
+    and     r12, #0xff
+    eor     r8, r8, r12             // xor the columns (sbox output byte)
+    eor     r9, r8                  // xor the columns
+    eor     r10, r9                 // xor the columns
+    eor     r11, r10                // xor the columns
+    strd    r8, r9, [sp], #8        // store on the stack for bitslicing
+    strd    r10, r11, [sp], #8      // store on the stack for bitslicing
+    bx      lr
 
 /******************************************************************************
 * SWAPMOVE calls used in the packing_rkey subroutine.
 ******************************************************************************/
 .align 2
 swapmove_rkey:
-    str.w   r14, [sp, #-4]          // store link register on the stack
+    str     r14, [sp, #-4]          // store link register on the stack
     eor     r14, r5, r4, lsr #8     // SWAPMOVE(r4, r5, 0x00ff00ff, 8) ...
     and     r14, r14, r3
     eor     r5, r5, r14
@@ -101,7 +181,7 @@ swapmove_rkey:
     and     r14, r14, r2
     eor     r7, r7, r14
     eor     r5, r5, r14, lsl #16    // ... SWAPMOVE(r5, r7, 0x0000ffff, 16)
-    ldr.w   r14, [sp, #-4]          // restore link register
+    ldr     r14, [sp, #-4]          // restore link register
     bx      lr
 
 /******************************************************************************
@@ -202,7 +282,7 @@ packing_rkey_not:
 .align 2
 aes128_keyschedule_lut:
     push    {r0-r12,r14}
-    sub.w   sp, #160                // allocate space to store the 11 rkeys
+    sub.w   sp, #160                // allocate space to store the 10 rkeys
     ldm     r1, {r4-r7}             // load the encryption key
     adr     r3, AES_Sbox_compact    // load the sbox LUT address in r3
     movw    r2, #0x01               // 1st const
@@ -241,8 +321,8 @@ aes128_keyschedule_lut:
     bl      packing_rkey            // do not apply NOT on the 1st key
     mov     r4, r7
     bl      packing_rkey            // do not apply NOT on the 1st key
-    movw    r12, #10
-loop_keyschedule:
+    movw    r12, #10                // 10 rkeys left to pack
+loop_aes128_keyschedule:
     ldmia   sp!, {r4-r7} 
     bl      swapmove_rkey
     bl      packing_rkey_not
@@ -253,6 +333,73 @@ loop_keyschedule:
     mov     r4, r7
     bl      packing_rkey_not
     subs    r12, #1
-    bne     loop_keyschedule
+    bne     loop_aes128_keyschedule
     pop     {r0-r12, r14}           // restore context
+    bx      lr
+
+/******************************************************************************
+* Pre-computes all the AES-256 round keys according to the barrel-shiftrows 
+* representation. Note that additional NOTs are incorporated to speed up SBox
+* calculations in the encryption function.
+******************************************************************************/
+@ void aes256_keyschedule_lut(u32* rkeys, const u8* key);
+.global aes256_keyschedule_lut
+.type   aes256_keyschedule_lut,%function
+.align 2
+aes256_keyschedule_lut:
+    push    {r0-r12,r14}
+    sub.w   sp, #224                    // allocate space to store the 14 rkeys
+    ldm     r1, {r4-r11}                // load the encryption key
+    stmia   sp!, {r8-r11}               // store the 128 last key bits on stack
+    adr     r3, AES_Sbox_compact        // load the sbox LUT address in r3
+    movw    r2, #0x01                   // 1st const
+    bl      aes256_keyschedule_rfunc_0  // 1st round
+    bl      aes256_keyschedule_rfunc_1  // 2nd round
+    movw    r2, #0x02                   // 2nd rconst
+    bl      aes256_keyschedule_rfunc_0  // 3rd round
+    bl      aes256_keyschedule_rfunc_1  // 4th round
+    movw    r2, #0x04                   // 3rd rconst
+    bl      aes256_keyschedule_rfunc_0  // 5th round
+    bl      aes256_keyschedule_rfunc_1  // 6th round
+    movw    r2, #0x08                   // 4th rconst
+    bl      aes256_keyschedule_rfunc_0  // 7th round
+    bl      aes256_keyschedule_rfunc_1  // 8th round
+    movw    r2, #0x10                   // 5th rconst
+    bl      aes256_keyschedule_rfunc_0  // 9th round
+    bl      aes256_keyschedule_rfunc_1  // 10th round
+    movw    r2, #0x20                   // 6th rconst
+    bl      aes256_keyschedule_rfunc_0  // 11th round
+    bl      aes256_keyschedule_rfunc_1  // 12th round
+    movw    r2, #0x40                   // 7th rconst
+    bl      aes256_keyschedule_rfunc_0  // 13th round
+    //done expanding, now start bitslicing
+    ldrd    r0, r1, [sp]
+    ldm     r1, {r4-r7}                 // load the encryption key
+    sub.w   sp, #224                    // stack now points to the 1st key
+    movw    r1, #0x8080
+    movt    r1, #0x8080                 // r1 <- 0x80808080
+    movw    r2, #0xffff                 // r2 <- 0x0000ffff
+    eor     r3, r2, r2, lsl #8          // r3 <- 0x00ff00ff
+    bl      swapmove_rkey
+    bl      packing_rkey                // do not apply NOT on the 1st key
+    mov     r4, r5
+    bl      packing_rkey                // do not apply NOT on the 1st key
+    mov     r4, r6
+    bl      packing_rkey                // do not apply NOT on the 1st key
+    mov     r4, r7
+    bl      packing_rkey                // do not apply NOT on the 1st key
+    movw    r12, #14                    // 14 rkeys left to pack
+loop_aes256_keyschedule:
+    ldmia   sp!, {r4-r7} 
+    bl      swapmove_rkey
+    bl      packing_rkey_not
+    mov     r4, r5
+    bl      packing_rkey_not
+    mov     r4, r6
+    bl      packing_rkey_not
+    mov     r4, r7
+    bl      packing_rkey_not
+    subs    r12, #1
+    bne     loop_aes256_keyschedule
+    pop     {r0-r12, r14}               // restore context
     bx      lr

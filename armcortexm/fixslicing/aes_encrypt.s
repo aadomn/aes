@@ -1,15 +1,15 @@
 /******************************************************************************
-* ARM assembly fixsliced implementation of AES-128.
+* Assembly fixsliced implementation of AES-128 and AES-256 (encryption only).
 *
-* Fully-fixsliced implementation should run faster than the semi-fixsliced
-* version at the cost of a bigger code size.
+* Fully-fixsliced implementation runs faster than the semi-fixsliced variant
+* at the cost of a larger code size.
 *
 * See the paper available at https:// for more details.
 *
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     July 2020
+* @date     August 2020
 ******************************************************************************/
 
 .syntax unified
@@ -97,20 +97,20 @@ unpacking:
     eor     r12, r7, r11, lsr #4    // SWAPMOVE(r11, r7, 0x0f0f0f0f, 4) ....
     and     r12, r3
     eor     r9, r7, r12
-    eor     r11, r11, r12, lsl #4   // .... SWAPMOVE(r11, r7, 0x0f0f0f0f, 4)
-    eor     r12, r6, r10, lsr #4    // SWAPMOVE(r10, r6, 0x0f0f0f0f, 4) ....
+    eor     r11, r11, r12, lsl #4     // .... SWAPMOVE(r11, r7, 0x0f0f0f0f, 4)
+    eor     r12, r6, r10, lsr #4     // SWAPMOVE(r10, r6, 0x0f0f0f0f, 4) ....
     and     r12, r3
     eor     r1, r6, r12
-    eor     r7, r10, r12, lsl #4    // .... SWAPMOVE(r10, r6, 0x0f0f0f0f, 4)
+    eor     r7, r10, r12, lsl #4     // .... SWAPMOVE(r10, r6, 0x0f0f0f0f, 4)
     eor     r12, r4, r8, lsr #4     // SWAPMOVE(r8, r4, 0x0f0f0f0f, 4) ....
     and     r12, r3
     eor     r4, r12
     eor     r8, r8, r12, lsl #4     // .... SWAPMOVE(r8, r4, 0x0f0f0f0f,4)
     eor     r3, r3, r3, lsl #2      // r3 <- 0x33333333 (mask for SWAPMOVE)
-    eor     r12, r2, r11, lsr #2    // SWAPMOVE(r11, r2, 0x33333333, 2) ....
+    eor     r12, r2, r11, lsr #2     // SWAPMOVE(r11, r2, 0x33333333, 2) ....
     and     r12, r3
     eor     r10, r2, r12
-    eor     r11, r11, r12, lsl #2   // .... SWAPMOVE(r11, r2, 0x33333333, 2)
+    eor     r11, r11, r12, lsl #2     // .... SWAPMOVE(r11, r2, 0x33333333, 2)
     eor     r12, r8, r7, lsr #2     // SWAPMOVE(r7, r8, 0x33333333, 2) ....
     and     r12, r3
     eor     r6, r8, r12
@@ -132,14 +132,14 @@ unpacking:
     and     r12, r1
     eor     r5, r12
     eor     r9, r9, r12, lsl #1     // .... SWAPMOVE(r9, r5, 0x55555555, 1)
-    eor     r12, r6, r10, lsr #1    // SWAPMOVE(r10, r6, 0x55555555, 1) ....
+    eor     r12, r6, r10, lsr #1     // SWAPMOVE(r10, r6, 0x55555555, 1) ....
     and     r12, r1
     eor     r6, r12
-    eor     r10, r10, r12, lsl #1   // .... SWAPMOVE(r10, r6, 0x55555555, 1)
-    eor     r12, r7, r11, lsr #1    // SWAPMOVE(r11, r7, 0x55555555, 1) ....
+    eor     r10, r10, r12, lsl #1     // .... SWAPMOVE(r10, r6, 0x55555555, 1)
+    eor     r12, r7, r11, lsr #1     // SWAPMOVE(r11, r7, 0x55555555, 1) ....
     and     r12, r1
     eor     r7, r12
-    eor     r11, r11, r12, lsl #1   // .... SWAPMOVE(r11, r7, 0x55555555, 1)
+    eor     r11, r11, r12, lsl #1     // .... SWAPMOVE(r11, r7, 0x55555555, 1)
     bx      lr
 
 /******************************************************************************
@@ -638,6 +638,54 @@ mixcolumns_3:
 ******************************************************************************/
 .align 2
 double_shiftrows:
+/*
+    str     r14, [sp, #52]          // store link register
+    movw    r14, #0x0f00
+    movt    r14, #0x0f00            // r14<- 0x0f000f00 (mask)
+    eor     r12, r14, r14, ror #4   // r12<- 0x0ff00ff0 (mask)
+    and     r5, r14, r11, ror #4    // r5 <- (S7 >>> 4) & 0x0f000f00
+    and     r4, r14, r11            // r4 <- S7 & 0x0f000f00
+    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
+    and     r11, r11, r12, ror #4   // r11<- S7 & 0x00ff00ff
+    orr     r11, r5                 // r11<- r11 | r5
+    and     r5, r14, r2, ror #4     // r5 <- (S6 >>> 4) & 0x0f000f00
+    and     r4, r14, r2             // r4 <- S6 & 0x0f000f00
+    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
+    and     r10, r2, r12, ror #4    // r10<- S6 & 0x00ff00ff
+    orr     r10, r5                 // r10<- r10 | r5
+    and     r5, r14, r0, ror #4     // r5 <- (S5 >>> 4) & 0x0f000f00
+    and     r4, r14, r0             // r4 <- S5 & 0x0f000f00
+    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
+    and     r9, r0, r12, ror #4     // r9 <- S5 & 0x00ff00ff
+    orr     r9, r5                  // r9 <- r9 | r5
+    and     r5, r14, r8, ror #4     // r5 <- (S4 >>> 4) & 0x0f000f00
+    and     r4, r14, r8             // r4 <- S4 & 0x0f000f00
+    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
+    and     r8, r8, r12, ror #4     // r8 <- S4 & 0x00ff00ff
+    orr     r8, r5                  // r8 <- r8 | r5
+    and     r5, r14, r7, ror #4     // r5 <- (S3 >>> 4) & 0x0f000f00
+    and     r4, r14, r7             // r4 <- S3 & 0x0f000f00
+    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
+    and     r7, r7, r12, ror #4     // r7 <- S3 & 0x00ff00ff
+    orr     r7, r5                  // r7 <- r7 | r5
+    and     r5, r14, r6, ror #4     // r5 <- (S2 >>> 4) & 0x0f000f00
+    and     r4, r14, r6             // r4 <- S2 & 0x0f000f00
+    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
+    and     r6, r6, r12, ror #4     // r6 <- S2 & 0x00ff00ff
+    orr     r6, r5                  // r6 <- r6 | r5
+    and     r5, r14, r3, ror #4     // r5 <- (S1 >>> 4) & 0x0f000f00
+    and     r4, r14, r3             // r4 <- S1 & 0x0f000f00
+    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
+    and     r3, r3, r12, ror #4     // r3 <- S1 & 0x00ff00ff
+    orr     r5, r3                  // r5 <- r5 | r3
+    and     r3, r14, r1, ror #4     // r3 <- (S0 >>> 4) & 0x0f000f00
+    and     r4, r14, r1             // r4 <- S0 & 0x0f000f00
+    ldr     r14, [sp, #52]          // restore link register
+    orr     r4, r3, r4, ror #28     // r4 <- r3 | (r4 >>> 28)
+    and     r1, r1, r12, ror #4     // r1 <- S1 & 0x00ff00ff
+    orr     r4, r1                  // r4 <- r4 | r1
+    bx      lr
+*/
     movw    r10, #0x0f00
     movt    r10, #0x0f00            // r10<- 0x0f000f00 (mask)
     eor     r12, r10, r10, ror #4   // r12<- 0x0ff00ff0 (mask)
@@ -744,6 +792,74 @@ aes128_encrypt_ffs:
     bx      lr
 
 /******************************************************************************
+* Fully-fixsliced implementation of AES-256.
+*
+* Two blocks are encrypted in parallel, without any operating mode.
+*
+* Note that additional 4 bytes are allocated on the stack as the function takes
+* 5 arguments as input.
+******************************************************************************/
+@ void aes256_encrypt_ffs(u8* ctext, u8* ctext_bis, const u8* ptext,
+@                   const u8* ptext_bis, const u32* rkey);
+.global aes256_encrypt_ffs
+.type   aes256_encrypt_ffs,%function
+.align 2
+aes256_encrypt_ffs:
+    push    {r0-r12,r14}
+    sub.w   sp, #56                 // allow space on the stack for tmp var
+    ldm     r2, {r4-r7}             // load the 1st 128-bit blocks in r4-r7
+    ldm     r3, {r8-r11}            // load the 2nd 128-bit blocks in r8-r11
+    ldr.w   r1, [sp, #112]          // load 'rkey' argument from the stack
+    str.w   r1, [sp, #48]           // store it there for 'add_round_key'
+    bl      packing                 // pack the 2 input blocks
+    bl      ark_sbox                // ark + sbox (round 0)
+    bl      mixcolumns_0            // mixcolumns (round 0)
+    bl      ark_sbox                // ark + sbox (round 1)
+    bl      mixcolumns_1            // mixcolumns (round 1)
+    bl      ark_sbox                // ark + sbox (round 2)
+    bl      mixcolumns_2            // mixcolumns (round 2)
+    bl      ark_sbox                // ark + sbox (round 3)
+    bl      mixcolumns_3            // mixcolumns (round 3)
+    bl      ark_sbox                // ark + sbox (round 4)
+    bl      mixcolumns_0            // mixcolumns (round 4)
+    bl      ark_sbox                // ark + sbox (round 5)
+    bl      mixcolumns_1            // mixcolumns (round 5)
+    bl      ark_sbox                // ark + sbox (round 6)
+    bl      mixcolumns_2            // mixcolumns (round 6)
+    bl      ark_sbox                // ark + sbox (round 7)
+    bl      mixcolumns_3            // mixcolumns (round 7)
+    bl      ark_sbox                // ark + sbox (round 8)
+    bl      mixcolumns_0            // mixcolumns (round 8)
+    bl      ark_sbox                // ark + sbox (round 9)
+    bl      mixcolumns_1            // mixcolumns (round 9)
+    bl      ark_sbox                // ark + sbox (round 10)
+    bl      mixcolumns_2            // mixcolumns (round 10)
+    bl      ark_sbox                // ark + sbox (round 11)
+    bl      mixcolumns_3            // mixcolumns (round 11)
+    bl      ark_sbox                // ark + sbox (round 12)
+    bl      mixcolumns_0            // mixcolumns (round 12)
+    bl      ark_sbox                // ark + sbox (round 13)
+    bl      double_shiftrows        // to resynchronize with the classical rep
+    ldr     r14, [sp, #48]          // ---------------------------------------
+    ldmia   r14!, {r4,r5,r10,r12}   // 
+    eor     r4, r1                  // 
+    eor     r5, r3                  // 
+    eor     r6, r10                 // 
+    eor     r7, r12                 //  Last add_round_key
+    ldmia   r14!, {r1,r3,r10,r12}   // 
+    eor     r8, r1                  // 
+    eor     r9, r0, r3              // 
+    eor     r10, r2                 // 
+    eor     r11, r12                // ---------------------------------------
+    bl      unpacking               // unpack the internal state
+    ldrd    r0, r1, [sp, #56]       // restore the addr to store the ciphertext
+    add.w   sp, #64                 // restore the stack pointer
+    stm     r0, {r4-r7}             // store the ciphertext
+    stm     r1, {r8-r11}            // store the ciphertext
+    pop     {r2-r12, r14}           // restore context
+    bx      lr
+
+/******************************************************************************
 * Semi-fixsliced and loop-based implementation of AES-128.
 *
 * Two blocks are encrypted in parallel.
@@ -788,7 +904,81 @@ aes128_encrypt_sfs:
     bl      mixcolumns_0            // mixcolumns (round 8)
     bl      ark_sbox                // ark + sbox (round 9)
     bl      double_shiftrows        // to resynchronize with the classical rep
-    ldr     r14, [sp, #48]          // ---------------------------------------
+    ldr   r14, [sp, #48]            // ---------------------------------------
+    ldmia   r14!, {r4,r5,r10,r12}   // 
+    eor     r4, r1                  // 
+    eor     r5, r3                  // 
+    eor     r6, r10                 // 
+    eor     r7, r12                 //  Last add_round_key
+    ldmia   r14!, {r1,r3,r10,r12}   // 
+    eor     r8, r1                  // 
+    eor     r9, r0, r3              // 
+    eor     r10, r2                 // 
+    eor     r11, r12                // ---------------------------------------
+    bl      unpacking               // unpack the internal state
+    ldrd    r0, r1, [sp, #56]       // restore the addr to store the ciphertext
+    add.w   sp, #64                 // restore the stack pointer
+    stm     r0, {r4-r7}             // store the ciphertext
+    stm     r1, {r8-r11}            // store the ciphertext
+    pop     {r2-r12, r14}           // restore context
+    bx      lr
+
+/******************************************************************************
+* Semi-fixsliced and loop-based implementation of AES-256.
+*
+* Two blocks are encrypted in parallel.
+*
+* Note that additional 4 bytes are allocated on the stack as the function takes
+* 5 arguments as input.
+******************************************************************************/
+@ void aes256_encrypt_sfs(u8* ctext, u8* ctext_bis, const u8* ptext,
+@                   const u8* ptext_bis, const u32* rkey);
+.global aes256_encrypt_sfs
+.type   aes256_encrypt_sfs,%function
+.align 2
+aes256_encrypt_sfs:
+    push    {r0-r12,r14}
+    sub.w   sp, #56                 // allow space on the stack for tmp var
+    ldm     r2, {r4-r7}             // load the 1st 128-bit blocks in r4-r7
+    ldm     r3, {r8-r11}            // load the 2nd 128-bit blocks in r8-r11
+    ldr.w   r1, [sp, #112]          // load 'rkey' argument from the stack
+    str.w   r1, [sp, #48]           // store it there for 'add_round_key'
+    bl      packing                 // pack the 2 input blocks
+    bl      ark_sbox                // ark + sbox (round 0)
+    bl      mixcolumns_0            // mixcolumns (round 0)
+    bl      ark_sbox                // ark + sbox (round 1)
+    bl      double_shiftrows        // to resynchronize with the classical rep
+    bl      mixcolumns_3            // mixcolumns (round 1)
+    bl      ark_sbox                // ark + sbox (round 2)
+    bl      mixcolumns_0            // mixcolumns (round 2)
+    bl      ark_sbox                // ark + sbox (round 3)
+    bl      double_shiftrows        // to resynchronize with the classical rep
+    bl      mixcolumns_3            // mixcolumns (round 3)
+    bl      ark_sbox                // ark + sbox (round 4)
+    bl      mixcolumns_0            // mixcolumns (round 4)
+    bl      ark_sbox                // ark + sbox (round 5)
+    bl      double_shiftrows        // to resynchronize with the classical rep
+    bl      mixcolumns_3            // mixcolumns (round 5)
+    bl      ark_sbox                // ark + sbox (round 6)
+    bl      mixcolumns_0            // mixcolumns (round 6)
+    bl      ark_sbox                // ark + sbox (round 7)
+    bl      double_shiftrows        // to resynchronize with the classical rep
+    bl      mixcolumns_3            // mixcolumns (round 7)
+    bl      ark_sbox                // ark + sbox (round 8)
+    bl      mixcolumns_0            // mixcolumns (round 8)
+    bl      ark_sbox                // ark + sbox (round 9)
+    bl      double_shiftrows        // to resynchronize with the classical rep
+    bl      mixcolumns_3            // mixcolumns (round 9)
+    bl      ark_sbox                // ark + sbox (round 10)
+    bl      mixcolumns_0            // mixcolumns (round 10)
+    bl      ark_sbox                // ark + sbox (round 11)
+    bl      double_shiftrows        // to resynchronize with the classical rep
+    bl      mixcolumns_3            // mixcolumns (round 11)
+    bl      ark_sbox                // ark + sbox (round 12)
+    bl      mixcolumns_0            // mixcolumns (round 12)
+    bl      ark_sbox                // ark + sbox (round 13)
+    bl      double_shiftrows        // to resynchronize with the classical rep
+    ldr   r14, [sp, #48]            // ---------------------------------------
     ldmia   r14!, {r4,r5,r10,r12}   // 
     eor     r4, r1                  // 
     eor     r5, r3                  // 
