@@ -1,5 +1,5 @@
 /******************************************************************************
-* Bitsliced implementations of AES-128 (encryption-only) in C language using
+* Bitsliced implementations of AES-128 and AES-256 (encryption-only) in C using
 * the barrel-shiftrows representation.
 *
 * See the paper available at https:// for more details.
@@ -7,7 +7,7 @@
 * @author 	Alexandre Adomnicai, Nanyang Technological University, Singapore
 *			alexandre.adomnicai@ntu.edu.sg
 *
-* @date		July 2020
+* @date		August 2020
 ******************************************************************************/
 #include "aes.h"
 #include "internal-aes.h"
@@ -344,5 +344,28 @@ void aes128_encrypt(unsigned char* out, const unsigned char* in,
 			mixcolumns(state);		 	// MixColumns on the entire state
 	}
 	ark(state, rkeys+320); 				// AddRoundKey on the entire state
+	unpacking(out, state); 				// From barrel-shiftrows to bytes
+}
+
+/******************************************************************************
+* Encryption of 8 128-bit blocks of data in parallel using AES-256 with the
+* barrel-shiftrows representation.
+* The round keys are assumed to be pre-computed.
+******************************************************************************/
+void aes256_encrypt(unsigned char* out, const unsigned char* in,
+				const uint32_t* rkeys) {
+	uint32_t state[32]; 				// 1024-bit state (8 blocks in //)
+	packing(state, in); 				// From bytes to the barrel-shiftrows
+	for(int i = 0; i < 14; i++) {
+		ark(state, rkeys+i*32); 		// AddRoundKey on the entire state
+		sbox(state); 					// S-box on the 1st quarter state
+		sbox(state + 8); 				// S-box on the 2nd quarter state
+		sbox(state + 16); 				// S-box on the 3rd quarter state
+		sbox(state + 24); 				// S-box on the 4th quarter state
+	    shiftrows(state); 				// ShiftRows on the entire state
+	    if (i != 13) 					// No MixColumns in the last round
+			mixcolumns(state);		 	// MixColumns on the entire state
+	}
+	ark(state, rkeys+448); 				// AddRoundKey on the entire state
 	unpacking(out, state); 				// From barrel-shiftrows to bytes
 }

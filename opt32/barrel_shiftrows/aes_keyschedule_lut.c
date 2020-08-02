@@ -1,14 +1,14 @@
 /******************************************************************************
-* C language implementations of the AES-128 key schedule to match the barrel-
-* shiftrows representation. Note that those implementations rely on Look-Up 
-* Tables (LUT).
+* C language implementations of the AES-128 and AES-256 key schedules to match
+* the barrel-shiftrows representation. Note that those implementations rely on
+* Look-Up Tables (LUT).
 *
 * See the paper available at https:// for more details.
 *
 * @author 	Alexandre Adomnicai, Nanyang Technological University, Singapore
 *			alexandre.adomnicai@ntu.edu.sg
 *
-* @date		July 2020
+* @date		August 2020
 ******************************************************************************/
 #include "aes.h"
 #include "internal-aes.h"
@@ -61,7 +61,9 @@ static unsigned char rcon[11] = {
 /******************************************************************************
 * Packing routine used to rearrange the rkeys to match the barrel-shiftrows.
 * It is about twice more efficient than the 'packing' func. This optimization
-* is possible because the 8 16-byte blocks to pack are all equal.
+* is possible because the 8 16-byte blocs to pack are all equal.
+* However, if one wants to encrypt 8 blocs in parallel with different keys, the
+* 'packing' function is necessary.
 ******************************************************************************/
 static void packing_rkey(uint32_t* rkey_bsr, const unsigned char* rkey) {
 	uint32_t tmp, tmp0, tmp1, tmp2, tmp3;
@@ -93,11 +95,6 @@ static void packing_rkey(uint32_t* rkey_bsr, const unsigned char* rkey) {
 	}
 }
 
-/******************************************************************************
-* Pre-computes all the AES-128 round keys according to the barrel-shiftrows 
-* representation. Note that additional NOTs are incorporated to speed up SBox
-* calculations in the encryption function.
-******************************************************************************/
 void aes128_keyschedule_lut(uint32_t* rkeys_bsr, const unsigned char* key) {
 	uint32_t rkeys[44];
 	// key schedule in the classical representation
@@ -118,6 +115,58 @@ void aes128_keyschedule_lut(uint32_t* rkeys_bsr, const unsigned char* key) {
 	// packing all round keys to match the fully-fixsliced representation
 	packing_rkey(rkeys_bsr, (unsigned char*)rkeys);
 	for(int i = 1; i < 11; i++) {
+		packing_rkey(rkeys_bsr + i*32, (unsigned char*)(rkeys + i*4));
+		for(int j = 0; j < 32; j+=8) {
+			rkeys_bsr[i*32+j+1] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+			rkeys_bsr[i*32+j+2] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+			rkeys_bsr[i*32+j+6] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+			rkeys_bsr[i*32+j+7] ^= 0xffffffff; 	// NOT to speed up SBox calculations
+		}
+	}
+}
+
+void aes256_keyschedule_lut(uint32_t* rkeys_bsr, const unsigned char* key) {
+	uint32_t rkeys[60];
+	// key schedule in the classical representation
+	rkeys[0] = LE_LOAD_32(key);
+	rkeys[1] = LE_LOAD_32(key + 4);
+	rkeys[2] = LE_LOAD_32(key + 8);
+	rkeys[3] = LE_LOAD_32(key + 12);
+	rkeys[4] = LE_LOAD_32(key + 16);
+	rkeys[5] = LE_LOAD_32(key + 20);
+	rkeys[6] = LE_LOAD_32(key + 24);
+	rkeys[7] = LE_LOAD_32(key + 28);
+	// loop over double rounds for the round function
+	for(int i = 8; i < 56; i+=8) {
+		rkeys[i] = rkeys[i-8] ^ rcon[i/8];
+		rkeys[i] ^= (sbox_lut[rkeys[i-1] & 0xff] << 24);
+		rkeys[i] ^= sbox_lut[(rkeys[i-1] >> 8) & 0xff];
+		rkeys[i] ^= (sbox_lut[rkeys[i-1] >> 24] << 16);
+		rkeys[i] ^= (sbox_lut[(rkeys[i-1] >> 16) & 0xff] << 8);
+		rkeys[i+1] = rkeys[i] ^ rkeys[i-7];
+		rkeys[i+2] = rkeys[i+1] ^ rkeys[i-6];
+		rkeys[i+3] = rkeys[i+2] ^ rkeys[i-5];
+		rkeys[i+4] = rkeys[i-4];
+		rkeys[i+4] ^= sbox_lut[rkeys[i+3] & 0xff];
+		rkeys[i+4] ^= sbox_lut[(rkeys[i+3] >> 8) & 0xff] << 8;
+		rkeys[i+4] ^= sbox_lut[(rkeys[i+3] >> 16) & 0xff] << 16;
+		rkeys[i+4] ^= sbox_lut[rkeys[i+3] >> 24] << 24;
+		rkeys[i+5] = rkeys[i+4] ^ rkeys[i-3];
+		rkeys[i+6] = rkeys[i+5] ^ rkeys[i-2];
+		rkeys[i+7] = rkeys[i+6] ^ rkeys[i-1];
+	}
+	// last round
+	rkeys[56] = rkeys[48] ^ rcon[7];
+	rkeys[56] ^= (sbox_lut[rkeys[55] & 0xff] << 24);
+	rkeys[56] ^= sbox_lut[(rkeys[55] >> 8) & 0xff];
+	rkeys[56] ^= (sbox_lut[rkeys[55] >> 24] << 16);
+	rkeys[56] ^= (sbox_lut[(rkeys[55] >> 16) & 0xff] << 8);
+	rkeys[57] = rkeys[56] ^ rkeys[49];
+	rkeys[58] = rkeys[57] ^ rkeys[50];
+	rkeys[59] = rkeys[58] ^ rkeys[51];
+	// packing all round keys to match the fully-fixsliced representation
+	packing_rkey(rkeys_bsr, (unsigned char*)rkeys);
+	for(int i = 1; i < 15; i++) {
 		packing_rkey(rkeys_bsr + i*32, (unsigned char*)(rkeys + i*4));
 		for(int j = 0; j < 32; j+=8) {
 			rkeys_bsr[i*32+j+1] ^= 0xffffffff; 	// NOT to speed up SBox calculations
