@@ -1,8 +1,8 @@
 # Fast constant-time AES implementations on 32-bit architectures
 
-## Structure of the repository
-
 This repository contains efficient constant-time implementations for the Advanced Encryption Standard (AES) algorithm as supplementary material for the paper [Fixslicing AES-like Ciphers - New bitsliced AES speed records on ARM Cortex-M and RISC-V](https://eprint.iacr.org/2020) published at 
+
+## Structure of the repository
 
 The repository structure is as follows:
 ```
@@ -48,9 +48,9 @@ Since the fixsliced representations require 4 times less RAM to store all the ro
 | AES-128 semi-fixsliced   | 2               | 91.3          | 108.3                 |
 | AES-128 fully-fixsliced  | 2               | 87.3          | 101.6                 |
 | AES-128 barrel-shiftrows | 8               | 94.8          | 78.9                  |
-| AES-256 semi-fixsliced   | 2               | 125.8         |                       |
-| AES-256 fully-fixsliced  | 2               | 119.8         |                       |
-| AES-256 barrel-shiftrows | 8               | 127.9         |                       |
+| AES-256 semi-fixsliced   | 2               | 125.8         | 153.4                 |
+| AES-256 fully-fixsliced  | 2               | 119.8         | 139.1                 |
+| AES-256 barrel-shiftrows | 8               | 127.9         | 105.7                 |
 
 ## First-order masking
 
@@ -59,6 +59,6 @@ A first-order masked implementation based on fixslicing can be found in `armcort
 | Algorithm                                 | Parallel blocks | ARM Cortex-M4 |
 |:------------------------------------------|:---------------:|:-------------:|
 | 1st-order masked AES-128 semi-fixsliced   | 2               | 200.7         |
-| 1st-order masked AES-128 fully-fixsliced         | 2               | 196           |
+| 1st-order masked AES-128 fully-fixsliced  | 2               | 196           |
 
 :warning::rotating_light: This masking scheme was mainly introduced to achieve first-order masking while limiting the amount of randomness to generate. Please be aware that other first-order masking schemes provide a better security level. Note that no practical evaluation has been undertaken to assess the security of our masked implementations! :rotating_light::warning: 
