@@ -1,6 +1,6 @@
 /******************************************************************************
-* RV32I assembly implememtations of the AES-128 key schedule according to
-* fixslicing.
+* RV32I assembly implementations of the AES-128 and AES-256 key schedule
+* according to fixslicing.
 * Note that those implementations are fully bitsliced and do not rely on any
 * Look-Up Table (LUT).
 *
@@ -9,7 +9,7 @@
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     July 2020
+* @date     August 2020
 ******************************************************************************/
 
 .text
@@ -378,14 +378,15 @@ inv_shiftrows_3:
 *   - new       new round key
 *   - old       round key from the previous round
 *   - tmp0-1    temporary registers
+*   - imm       immediate value for rotation
 * Prerequisites:
 *	- a1  		to contain 0xc0c0c0c0
 *	- a2  		to contain 0x30303030
 *	- a3  		to contain 0x0c0c0c0c
 *	- a4  		to contain 0x03030303
 ******************************************************************************/
-.macro xor_column new, old, tmp0, tmp1
-    rori 	\new, \new, 2, \tmp0, \tmp1 // new <- ROR(s7,2)
+.macro xor_column new, old, tmp0, tmp1, imm
+    rori 	\new, \new,\imm,\tmp0,\tmp1 // new <- ROR(s7,imm)
     xor 	\new, \new, \old 			// new <- new ^ old
     and 	\new, \new, a1 				// new <- new & 0xc0c0c0c0
     srli 	\tmp0, \new, 2	 			// tmp <- new >> 2
@@ -405,7 +406,7 @@ inv_shiftrows_3:
 /******************************************************************************
 * XOR all the columns during a round of the AES-128 key schedule.
 ******************************************************************************/
-xor_columns:
+aes128_xorcolumns_rotword:
 	li 			a1, 0xc0c0c0c0 			// a1 <- 0xc0c0c0c0
 	srli 		a2, a1, 2 				// a2 <- 0x30303030
 	srli 		a3, a1, 4 				// a3 <- 0x0c0c0c0c
@@ -418,24 +419,81 @@ xor_columns:
 	lw 			t5, 20(a0) 	            // load 6th prev rkey word
 	lw 			t6, 24(a0) 				// load 7th prev rkey word
 	lw 			a7, 28(a0) 				// load 8th prev rkey word
-	xor_column 	s7, a7, a5, a6
-	xor_column 	s6, t6, a5, a6
-	xor_column 	s5, t5, a5, a6
-	xor_column 	s4, t4, a5, a6
-	xor_column 	s3, t3, a5, a6
-	xor_column 	s2, t2, a5, a6
-	xor_column 	s1, t1, a5, a6
-	xor_column 	s0, t0, a5, a6
+	xor_column 	s7, a7, a5, a6, 2
+	xor_column 	s6, t6, a5, a6, 2
+	xor_column 	s5, t5, a5, a6, 2
+	xor_column 	s4, t4, a5, a6, 2
+	xor_column 	s3, t3, a5, a6, 2
+	xor_column 	s2, t2, a5, a6, 2
+	xor_column 	s1, t1, a5, a6, 2
+	xor_column 	s0, t0, a5, a6, 2
 	store_rkey 	s0,s1,s2,s3,s4,s5,s6,s7,32(a0)
 	addi 		a0, a0, 32 				// points to the next rkey
 	ret
 
 /******************************************************************************
-* Expansion of the encryption key according to the fully-fixsliced representa-
-* tion. 
+* XOR all the columns during a round of the AES-128 key schedule.
+******************************************************************************/
+aes256_xorcolumns_rotword:
+    li          a1, 0xc0c0c0c0          // a1 <- 0xc0c0c0c0
+    srli        a2, a1, 2               // a2 <- 0x30303030
+    srli        a3, a1, 4               // a3 <- 0x0c0c0c0c
+    srli        a4, a1, 6               // a4 <- 0x03030303 
+    lw          t0, 0(a0)               // load 1st prev rkey word
+    lw          t1, 4(a0)               // load 2nd prev rkey word
+    lw          t2, 8(a0)               // load 3rd prev rkey word
+    lw          t3, 12(a0)              // load 4th prev rkey word
+    lw          t4, 16(a0)              // load 5th prev rkey word
+    lw          t5, 20(a0)              // load 6th prev rkey word
+    lw          t6, 24(a0)              // load 7th prev rkey word
+    lw          a7, 28(a0)              // load 8th prev rkey word
+    xor_column  s7, a7, a5, a6, 2
+    xor_column  s6, t6, a5, a6, 2
+    xor_column  s5, t5, a5, a6, 2
+    xor_column  s4, t4, a5, a6, 2
+    xor_column  s3, t3, a5, a6, 2
+    xor_column  s2, t2, a5, a6, 2
+    xor_column  s1, t1, a5, a6, 2
+    xor_column  s0, t0, a5, a6, 2
+    store_rkey  s0,s1,s2,s3,s4,s5,s6,s7,64(a0)
+    addi        a0, a0, 32              // points to the next rkey
+    ret
+
+/******************************************************************************
+* XOR all the columns during a round of the AES-128 key schedule.
+******************************************************************************/
+aes256_xorcolumns:
+    li          a1, 0xc0c0c0c0          // a1 <- 0xc0c0c0c0
+    srli        a2, a1, 2               // a2 <- 0x30303030
+    srli        a3, a1, 4               // a3 <- 0x0c0c0c0c
+    srli        a4, a1, 6               // a4 <- 0x03030303 
+    lw          t0, 0(a0)               // load 1st prev rkey word
+    lw          t1, 4(a0)               // load 2nd prev rkey word
+    lw          t2, 8(a0)               // load 3rd prev rkey word
+    lw          t3, 12(a0)              // load 4th prev rkey word
+    lw          t4, 16(a0)              // load 5th prev rkey word
+    lw          t5, 20(a0)              // load 6th prev rkey word
+    lw          t6, 24(a0)              // load 7th prev rkey word
+    lw          a7, 28(a0)              // load 8th prev rkey word
+    xor_column  s7, a7, a5, a6, 26
+    xor_column  s6, t6, a5, a6, 26
+    xor_column  s5, t5, a5, a6, 26
+    xor_column  s4, t4, a5, a6, 26
+    xor_column  s3, t3, a5, a6, 26
+    xor_column  s2, t2, a5, a6, 26
+    xor_column  s1, t1, a5, a6, 26
+    xor_column  s0, t0, a5, a6, 26
+    store_rkey  s0,s1,s2,s3,s4,s5,s6,s7,64(a0)
+    addi        a0, a0, 32              // points to the next rkey
+    ret
+
+/******************************************************************************
+* Fully bitsliced AES-128 key schedule according to the fully-fixsliced (ffs)
+* representation. 
 *
 * The function prototype is:
-*   - void aes128_keyschedule_ffs(uint32_t* rkeys, const uint8_t key);
+*   - void aes128_keyschedule_ffs(uint32_t* rkeys, const uint8_t* key0,
+*                           const uint8_t* key1);
 ******************************************************************************/
 .globl aes128_keyschedule_ffs
 .type aes128_keyschedule_ffs, %function
@@ -458,13 +516,13 @@ aes128_keyschedule_ffs:
     sw          s11, 52(sp)             // save context
     sw          s9, 56(sp)              // save context
     lw          s0, 0(a1)               // load input word
-    lw          s1, 0(a1)               // load input word
+    lw          s1, 0(a2)               // load input word
     lw          s2, 4(a1)               // load input word
-    lw          s3, 4(a1)               // load input word
+    lw          s3, 4(a2)               // load input word
     lw          s4, 8(a1)               // load input word
-    lw          s5, 8(a1)               // load input word
+    lw          s5, 8(a2)               // load input word
     lw          s6, 12(a1)              // load input word
-    lw          s7, 12(a1)              // load input word
+    lw          s7, 12(a2)              // load input word
     li          t0, 0x55555555          // mask for SWAPMOVE
     li          t1, 0x33333333          // mask for SWAPMOVE
     li          t2, 0x0f0f0f0f          // mask for SWAPMOVE
@@ -472,39 +530,39 @@ aes128_keyschedule_ffs:
     store_rkey 	s0,s1,s2,s3,s4,s5,s6,s7, 0(a0)
     jal 		sbox
     xori 		s7, s7, 0x300 			// add the 1st rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		sbox
     xori 		s6, s6, 0x300 			// add the 2nd rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		inv_shiftrows_1
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s5, s5, 0x300 			// add the 3rd rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		double_shiftrows
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s4, s4, 0x300 			// add the 4th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		inv_shiftrows_3
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s3, s3, 0x300 			// add the 5th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s2, s2, 0x300 			// add the 6th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		inv_shiftrows_1
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s1, s1, 0x300 			// add the 7th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		double_shiftrows
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s0, s0, 0x300 			// add the 8th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		inv_shiftrows_3
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
@@ -512,14 +570,14 @@ aes128_keyschedule_ffs:
     xori 		s6, s6, 0x300 			// add the 9th rconst
     xori 		s4, s4, 0x300 			// add the 9th rconst
     xori 		s3, s3, 0x300 			// add the 9th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s6, s6, 0x300 			// add the 10th rconst
     xori 		s5, s5, 0x300 			// add the 10th rconst
     xori 		s3, s3, 0x300 			// add the 10th rconst
     xori 		s2, s2, 0x300 			// add the 10th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		inv_shiftrows_1
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     store_not_rkey 	s0,s1,s2,s3,s4,s5,s6,s7, 0(a0)
@@ -543,11 +601,150 @@ aes128_keyschedule_ffs:
 .size aes128_keyschedule_ffs,.-aes128_keyschedule_ffs
 
 /******************************************************************************
-* Expansion of the encryption key according to the fully-fixsliced representa-
-* tion. 
+* Fully bitsliced AES-256 key schedule according to the fully-fixsliced (ffs)
+* representation. 
 *
 * The function prototype is:
-*   - void aes128_keyschedule_sfs(uint32_t* rkeys, const uint8_t key);
+*   - void aes256_keyschedule_ffs(uint32_t* rkeys, const uint8_t* key0,
+*                           const uint8_t* key1);
+******************************************************************************/
+.globl aes256_keyschedule_ffs
+.type aes256_keyschedule_ffs, %function
+.align 2
+aes256_keyschedule_ffs:
+    addi        sp, sp, -64             // allocate space on the stack
+    sw          a0, 0(sp)               // save context
+    sw          a1, 4(sp)               // save context
+    sw          s0, 8(sp)               // save context
+    sw          s1, 12(sp)              // save context
+    sw          s2, 16(sp)              // save context
+    sw          s3, 20(sp)              // save context
+    sw          s4, 24(sp)              // save context
+    sw          s5, 28(sp)              // save context
+    sw          s6, 32(sp)              // save context
+    sw          s7, 36(sp)              // save context
+    sw          s8, 40(sp)              // save context
+    sw          ra, 44(sp)              // save context
+    sw          s10, 48(sp)             // save context
+    sw          s11, 52(sp)             // save context
+    sw          s9, 56(sp)              // save context
+    lw          s0, 0(a1)               // load first 128 key bits
+    lw          s1, 0(a2)               // load first 128 key bits
+    lw          s2, 4(a1)               // load first 128 key bits
+    lw          s3, 4(a2)               // load first 128 key bits
+    lw          s4, 8(a1)               // load first 128 key bits
+    lw          s5, 8(a2)               // load first 128 key bits
+    lw          s6, 12(a1)              // load first 128 key bits
+    lw          s7, 12(a2)              // load first 128 key bits
+    li          t0, 0x55555555          // mask for SWAPMOVE
+    li          t1, 0x33333333          // mask for SWAPMOVE
+    li          t2, 0x0f0f0f0f          // mask for SWAPMOVE
+    packing
+    store_rkey  s0,s1,s2,s3,s4,s5,s6,s7, 0(a0)
+    lw          s0, 16(a1)              // load last 128 key bits
+    lw          s1, 16(a2)              // load last 128 key bits
+    lw          s2, 20(a1)              // load last 128 key bits
+    lw          s3, 20(a2)              // load last 128 key bits
+    lw          s4, 24(a1)              // load last 128 key bits
+    lw          s5, 24(a2)              // load last 128 key bits
+    lw          s6, 28(a1)              // load last 128 key bits
+    lw          s7, 28(a2)              // load last 128 key bits
+    li          t0, 0x55555555          // mask for SWAPMOVE
+    li          t1, 0x33333333          // mask for SWAPMOVE
+    li          t2, 0x0f0f0f0f          // mask for SWAPMOVE
+    packing
+    store_rkey  s0,s1,s2,s3,s4,s5,s6,s7, 32(a0)
+    jal         sbox
+    xori        s7, s7, 0x300           // add the 1st rconst
+    jal         aes256_xorcolumns_rotword
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s6, s6, 0x300           // add the 2nd rconst
+    jal         aes256_xorcolumns_rotword
+    jal         double_shiftrows
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_3
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s5, s5, 0x300           // add the 3rd rconst
+    jal         aes256_xorcolumns_rotword
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s4, s4, 0x300           // add the 4th rconst
+    jal         aes256_xorcolumns_rotword
+    jal         double_shiftrows
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_3
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s3, s3, 0x300           // add the 5th rconst
+    jal         aes256_xorcolumns_rotword
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s2, s2, 0x300           // add the 6th rconst
+    jal         aes256_xorcolumns_rotword
+    jal         double_shiftrows
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_3
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s1, s1, 0x300           // add the 7th rconst
+    jal         aes256_xorcolumns_rotword
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    lw          t0, 0(a0)               // load 1st prev rkey word
+    lw          t1, 4(a0)               // load 2nd prev rkey word
+    lw          t2, 8(a0)               // load 3rd prev rkey word
+    lw          t3, 12(a0)              // load 4th prev rkey word
+    lw          t4, 16(a0)              // load 5th prev rkey word
+    lw          t5, 20(a0)              // load 6th prev rkey word
+    lw          t6, 24(a0)              // load 7th prev rkey word
+    lw          a7, 28(a0)              // load 8th prev rkey word
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, 0(a0)
+    store_not_rkey  s0,s1,s2,s3,s4,s5,s6,s7, 32(a0)
+    lw          a0, 0(sp)               // restore context
+    lw          a1, 4(sp)               // restore context
+    lw          s0, 8(sp)               // restore context
+    lw          s1, 12(sp)              // restore context
+    lw          s2, 16(sp)              // restore context
+    lw          s3, 20(sp)              // restore context
+    lw          s4, 24(sp)              // restore context
+    lw          s5, 28(sp)              // restore context
+    lw          s6, 32(sp)              // restore context
+    lw          s7, 36(sp)              // restore context
+    lw          s8, 40(sp)              // restore context
+    lw          ra, 44(sp)              // restore context
+    lw          s10, 48(sp)             // restore context
+    lw          s11, 52(sp)             // restore context
+    lw          s9, 56(sp)              // restore context
+    addi        sp, sp, 64              // restore stack pointer
+    ret                                 // exit
+.size aes256_keyschedule_ffs,.-aes256_keyschedule_ffs
+
+/******************************************************************************
+* Fully bitsliced AES-128 key schedule according to the semi-fixsliced (sfs)
+* representation. 
+*
+* The function prototype is:
+*   - void aes128_keyschedule_sfs(uint32_t* rkeys, const uint8_t* key0,
+*                           const uint8_t* key1);
 ******************************************************************************/
 .globl aes128_keyschedule_sfs
 .type aes128_keyschedule_sfs, %function
@@ -570,13 +767,13 @@ aes128_keyschedule_sfs:
     sw          s11, 52(sp)             // save context
     sw          s9, 56(sp)              // save context
     lw          s0, 0(a1)               // load input word
-    lw          s1, 0(a1)               // load input word
+    lw          s1, 0(a2)               // load input word
     lw          s2, 4(a1)               // load input word
-    lw          s3, 4(a1)               // load input word
+    lw          s3, 4(a2)               // load input word
     lw          s4, 8(a1)               // load input word
-    lw          s5, 8(a1)               // load input word
+    lw          s5, 8(a2)               // load input word
     lw          s6, 12(a1)              // load input word
-    lw          s7, 12(a1)              // load input word
+    lw          s7, 12(a2)              // load input word
     li          t0, 0x55555555          // mask for SWAPMOVE
     li          t1, 0x33333333          // mask for SWAPMOVE
     li          t2, 0x0f0f0f0f          // mask for SWAPMOVE
@@ -584,37 +781,37 @@ aes128_keyschedule_sfs:
     store_rkey 	s0,s1,s2,s3,s4,s5,s6,s7, 0(a0)
     jal 		sbox
     xori 		s7, s7, 0x300 		    // add the 1st rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		sbox
     xori 		s6, s6, 0x300 		    // add the 2nd rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		inv_shiftrows_1
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s5, s5, 0x300 		    // add the 3rd rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s4, s4, 0x300 		    // add the 4th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		inv_shiftrows_1
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s3, s3, 0x300 		    // add the 5th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s2, s2, 0x300 		    // add the 6th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		inv_shiftrows_1
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s1, s1, 0x300 	        // add the 7th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s0, s0, 0x300 	        // add the 8th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		inv_shiftrows_1
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
@@ -622,14 +819,14 @@ aes128_keyschedule_sfs:
     xori 		s6, s6, 0x300 		    // add the 9th rconst
     xori 		s4, s4, 0x300 		    // add the 9th rconst
     xori 		s3, s3, 0x300 		    // add the 9th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     jal 		sbox
     xori 		s6, s6, 0x300 			// add the 10th rconst
     xori 		s5, s5, 0x300 			// add the 10th rconst
     xori 		s3, s3, 0x300 			// add the 10th rconst
     xori 		s2, s2, 0x300 			// add the 10th rconst
-    jal 		xor_columns
+    jal 		aes128_xorcolumns_rotword
     jal 		inv_shiftrows_1
 	store_not_rkey 	t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
     store_not_rkey 	s0,s1,s2,s3,s4,s5,s6,s7, 0(a0)
@@ -651,3 +848,138 @@ aes128_keyschedule_sfs:
     addi        sp, sp, 64              // restore stack pointer
     ret                                 // exit
 .size aes128_keyschedule_sfs,.-aes128_keyschedule_sfs
+
+/******************************************************************************
+* Fully bitsliced AES-256 key schedule according to the semi-fixsliced (sfs)
+* representation. 
+*
+* The function prototype is:
+*   - void aes256_keyschedule_sfs(uint32_t* rkeys, const uint8_t* key0,
+*                           const uint8_t* key1);
+******************************************************************************/
+.globl aes256_keyschedule_sfs
+.type aes256_keyschedule_sfs, %function
+.align 2
+aes256_keyschedule_sfs:
+    addi        sp, sp, -64             // allocate space on the stack
+    sw          a0, 0(sp)               // save context
+    sw          a1, 4(sp)               // save context
+    sw          s0, 8(sp)               // save context
+    sw          s1, 12(sp)              // save context
+    sw          s2, 16(sp)              // save context
+    sw          s3, 20(sp)              // save context
+    sw          s4, 24(sp)              // save context
+    sw          s5, 28(sp)              // save context
+    sw          s6, 32(sp)              // save context
+    sw          s7, 36(sp)              // save context
+    sw          s8, 40(sp)              // save context
+    sw          ra, 44(sp)              // save context
+    sw          s10, 48(sp)             // save context
+    sw          s11, 52(sp)             // save context
+    sw          s9, 56(sp)              // save context
+    lw          s0, 0(a1)               // load first 128 key bits
+    lw          s1, 0(a2)               // load first 128 key bits
+    lw          s2, 4(a1)               // load first 128 key bits
+    lw          s3, 4(a2)               // load first 128 key bits
+    lw          s4, 8(a1)               // load first 128 key bits
+    lw          s5, 8(a2)               // load first 128 key bits
+    lw          s6, 12(a1)              // load first 128 key bits
+    lw          s7, 12(a2)              // load first 128 key bits
+    li          t0, 0x55555555          // mask for SWAPMOVE
+    li          t1, 0x33333333          // mask for SWAPMOVE
+    li          t2, 0x0f0f0f0f          // mask for SWAPMOVE
+    packing
+    store_rkey  s0,s1,s2,s3,s4,s5,s6,s7, 0(a0)
+    lw          s0, 16(a1)              // load last 128 key bits
+    lw          s1, 16(a2)              // load last 128 key bits
+    lw          s2, 20(a1)              // load last 128 key bits
+    lw          s3, 20(a2)              // load last 128 key bits
+    lw          s4, 24(a1)              // load last 128 key bits
+    lw          s5, 24(a2)              // load last 128 key bits
+    lw          s6, 28(a1)              // load last 128 key bits
+    lw          s7, 28(a2)              // load last 128 key bits
+    li          t0, 0x55555555          // mask for SWAPMOVE
+    li          t1, 0x33333333          // mask for SWAPMOVE
+    li          t2, 0x0f0f0f0f          // mask for SWAPMOVE
+    packing
+    store_rkey  s0,s1,s2,s3,s4,s5,s6,s7, 32(a0)
+    jal         sbox
+    xori        s7, s7, 0x300           // add the 1st rconst
+    jal         aes256_xorcolumns_rotword
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s6, s6, 0x300           // add the 2nd rconst
+    jal         aes256_xorcolumns_rotword
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s5, s5, 0x300           // add the 3rd rconst
+    jal         aes256_xorcolumns_rotword
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s4, s4, 0x300           // add the 4th rconst
+    jal         aes256_xorcolumns_rotword
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s3, s3, 0x300           // add the 5th rconst
+    jal         aes256_xorcolumns_rotword
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s2, s2, 0x300           // add the 6th rconst
+    jal         aes256_xorcolumns_rotword
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    jal         aes256_xorcolumns
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    jal         sbox
+    xori        s1, s1, 0x300           // add the 7th rconst
+    jal         aes256_xorcolumns_rotword
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, -32(a0)
+    lw          t0, 0(a0)               // load 1st prev rkey word
+    lw          t1, 4(a0)               // load 2nd prev rkey word
+    lw          t2, 8(a0)               // load 3rd prev rkey word
+    lw          t3, 12(a0)              // load 4th prev rkey word
+    lw          t4, 16(a0)              // load 5th prev rkey word
+    lw          t5, 20(a0)              // load 6th prev rkey word
+    lw          t6, 24(a0)              // load 7th prev rkey word
+    lw          a7, 28(a0)              // load 8th prev rkey word
+    jal         inv_shiftrows_1
+    store_not_rkey  t0,t1,t2,t3,t4,t5,t6,a7, 0(a0)
+    store_not_rkey  s0,s1,s2,s3,s4,s5,s6,s7, 32(a0)
+    lw          a0, 0(sp)               // restore context
+    lw          a1, 4(sp)               // restore context
+    lw          s0, 8(sp)               // restore context
+    lw          s1, 12(sp)              // restore context
+    lw          s2, 16(sp)              // restore context
+    lw          s3, 20(sp)              // restore context
+    lw          s4, 24(sp)              // restore context
+    lw          s5, 28(sp)              // restore context
+    lw          s6, 32(sp)              // restore context
+    lw          s7, 36(sp)              // restore context
+    lw          s8, 40(sp)              // restore context
+    lw          ra, 44(sp)              // restore context
+    lw          s10, 48(sp)             // restore context
+    lw          s11, 52(sp)             // restore context
+    lw          s9, 56(sp)              // restore context
+    addi        sp, sp, 64              // restore stack pointer
+    ret                                 // exit
+.size aes256_keyschedule_sfs,.-aes256_keyschedule_sfs

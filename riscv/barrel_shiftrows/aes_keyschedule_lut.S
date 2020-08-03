@@ -1,13 +1,13 @@
 /******************************************************************************
-* RV32I assembly implememtations of the AES-128 key schedule according to the
-* barrel-shiftrows representation.
+* RV32I assembly implementations of the AES-128 and AES-256 key schedules
+*  according to the barrel-shiftrows representation.
 *
 * See the paper "Fixslicing AES-like Ciphers" at https:// for more details.
 *
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     June 2020
+* @date     August 2020
 ******************************************************************************/
 
 .data
@@ -70,9 +70,8 @@ rconst_lut:
 * Parameters:
 * - ins0-ins2 are srli or slli instruction
 * - mask is a mask to extract the  right bits
-* - addr is the address of the round keys array
 ******************************************************************************/
-.macro spread_bits  ins0, ins1, ins2, mask, addr
+.macro spread_bits  ins0, ins1, ins2, mask
     and         s1, t3, \mask
     \ins0       s2, s1, 1
     or          s1, s1, s2
@@ -135,13 +134,13 @@ rconst_lut:
 ******************************************************************************/
 redundant_code:
     store_rkeys s1, s2, s3, s11, 8(a0)      // store round key words
-    spread_bits slli, slli, srli, s6, 12(a0)// extract and spread bits of t3-t6
+    spread_bits slli, slli, srli, s6        // extract and spread bits of t3-t6
     store_rkeys s1, s2, s3, s11, 12(a0)     // store round key words
-    spread_bits srli, srli, slli, s7, 16(a0)// extract and spread bits of t3-t6
+    spread_bits srli, srli, slli, s7        // extract and spread bits of t3-t6
     store_rkeys s1, s2, s3, s11, 16(a0)     // store round key words
-    spread_bits slli, srli, slli, s8, 20(a0)// extract and spread bits of t3-t6
+    spread_bits slli, srli, slli, s8        // extract and spread bits of t3-t6
     store_rkeys s1, s2, s3, s11, 20(a0)     // store round key words
-    spread_bits srli, slli, slli, s9, 24(a0)// extract and spread bits of t3-t6
+    spread_bits srli, slli, slli, s9        // extract and spread bits of t3-t6
     ret
     
 /******************************************************************************
@@ -155,11 +154,128 @@ swapmove_rkey:
     ret
 
 /******************************************************************************
-* Expansion of the encryption key according to the barrel-shiftrows representa-
-* tion. 
+* Round function of the AES-256 key schedule in the classical representation
+* for rounds i s.t. i % 2 == 0. The key words are contained in registers a2-a5.
+******************************************************************************/
+aes256_rfunc_ks_0:
+    andi        s8, t3, 0xff            // s8 <- t3 & 0xff
+    andi        t6, s8, 0xfc            // ensure a 4-byte aligned address
+    add         t6, t6, a6              // t6 points to the right sbox address
+    lw          t6, 0(t6)               // t6 <- sbox[t3 & 0xfc]
+    andi        s8, s8, 0x03            // mask to extract the shift value
+    slli        s8, s8, 3               // shift to compute the shift value
+    srl         t6, t6, s8              // shift the 32-bit word
+    andi        t6, t6, 0xff            // extract the right byte
+    slli        t6, t6, 24              // t6 <- sbox[t3 & 0xff] << 24
+    xor         a2, a2, t6              // a2 <- a2 ^ (sbox[t3 & 0xff] << 24)
+    srli        s8, t3, 8               // s8 <- t3 >> 8
+    andi        s8, s8, 0xff            // s8 <- (t3 >> 8) & 0xff
+    andi        t6, s8, 0xfc                
+    add         t6, t6, a6              // t6 points to the right sbox address
+    lw          t6, 0(t6)               // t6 <- sbox[t3 & 0xff]
+    andi        s8, s8, 0x03
+    slli        s8, s8, 3
+    srl         t6, t6, s8
+    andi        t6, t6, 0xff
+    xor         a2, a2, t6              // a2 <- a2 ^ t6
+    srli        s8, t3, 24              // s8 <- t3 >> 24
+    andi        s8, s8, 0xff            // s8 <- (t3 >> 24) & 0xff
+    andi        t6, s8, 0xfc                
+    add         t6, t6, a6              // t6 points to the right sbox address
+    lw          t6, 0(t6)               // t6 <- sbox[t3 & 0xff]
+    andi        s8, s8, 0x03
+    slli        s8, s8, 3
+    srl         t6, t6, s8
+    andi        t6, t6, 0xff
+    slli        t6, t6, 16              // t6 <- sbox[(t3 >> 24) & 0xff] << 16
+    xor         a2, a2, t6              // a2 <- a2 ^ (sbox[(t3 >> 24) & 0xff] << 16)
+    srl         s8, t3, 16              // s8 <- t3 >> 16
+    andi        s8, s8, 0xff            // s8 <- (t3 >> 16) & 0xff
+    andi        t6, s8, 0xfc                
+    add         t6, t6, a6              // t6 points to the right sbox address
+    lw          t6, 0(t6)               // t6 <- sbox[t3 & 0xff]
+    andi        s8, s8, 0x03
+    slli        s8, s8, 3
+    srl         t6, t6, s8
+    andi        t6, t6, 0xff
+    slli        t6, t6, 8               // t6 <- sbox[(t3 >> 16) & 0xff] << 8
+    xor         a2, a2, t6              // a2 <- a2 ^ ( sbox[(t3 >> 16) & 0xff] << 8)
+    lw          t6, 0(a7)               // load rconst
+    xor         a2, a2, t6              // add rconst
+    addi        a7, a7, 4               // point to the next rconst
+    xor         a3, a3, a2              // update the rkey words
+    xor         a4, a4, a3              // update the rkey words
+    xor         a5, a5, a4              // update the rkey words
+    addi        sp, sp, -16             // store rkey words on stack, to be packed later
+    sw          a2, 0(sp)               // store 1st rkey word
+    sw          a3, 4(sp)               // store 2nd rkey word
+    sw          a4, 8(sp)               // store 3rd rkey word
+    sw          a5, 12(sp)              // store 4th rkey word
+    ret
+
+/******************************************************************************
+* Round function of the AES-256 key schedule in the classical representation
+* for rounds i s.t. i % 2 == 1. The key words are contained in registers t0-t3.
+******************************************************************************/
+aes256_rfunc_ks_1:
+    andi        s8, a5, 0xff            // s8 <- a5 & 0xff
+    andi        t6, s8, 0xfc            // ensure a 4-byte aligned address
+    add         t6, t6, a6              // t6 points to the right sbox address
+    lw          t6, 0(t6)               // t6 <- sbox[a5 & 0xfc]
+    andi        s8, s8, 0x03            // mask to extract the shift value
+    slli        s8, s8, 3               // shift to compute the shift value
+    srl         t6, t6, s8              // shift the 32-bit word
+    andi        t6, t6, 0xff            // extract the right byte
+    xor         t0, t0, t6              // t0 <- t0 ^ (sbox[a5 & 0xff])
+    srli        s8, a5, 8               // s8 <- a5 >> 8
+    andi        s8, s8, 0xff            // s8 <- (a5 >> 8) & 0xff
+    andi        t6, s8, 0xfc                
+    add         t6, t6, a6              // t6 points to the right sbox address
+    lw          t6, 0(t6)               // t6 <- sbox[a5 & 0xff]
+    andi        s8, s8, 0x03
+    slli        s8, s8, 3
+    srl         t6, t6, s8
+    andi        t6, t6, 0xff
+    slli        t6, t6, 8
+    xor         t0, t0, t6              // t0 <- t0 ^ t6
+    srli        s8, a5, 24              // s8 <- a5 >> 24
+    andi        s8, s8, 0xff            // s8 <- (a5 >> 24) & 0xff
+    andi        t6, s8, 0xfc                
+    add         t6, t6, a6              // t6 points to the right sbox address
+    lw          t6, 0(t6)               // t6 <- sbox[a5 & 0xff]
+    andi        s8, s8, 0x03
+    slli        s8, s8, 3
+    srl         t6, t6, s8
+    andi        t6, t6, 0xff
+    slli        t6, t6, 24              // t6 <- sbox[(a5 >> 24) & 0xff] << 24
+    xor         t0, t0, t6              // t0 <- t0 ^ (sbox[(a5 >> 24) & 0xff] << 24)
+    srl         s8, a5, 16              // s8 <- a5 >> 16
+    andi        s8, s8, 0xff            // s8 <- (a5 >> 16) & 0xff
+    andi        t6, s8, 0xfc                
+    add         t6, t6, a6              // t6 points to the right sbox address
+    lw          t6, 0(t6)               // t6 <- sbox[a5 & 0xff]
+    andi        s8, s8, 0x03
+    slli        s8, s8, 3
+    srl         t6, t6, s8
+    andi        t6, t6, 0xff
+    slli        t6, t6, 16              // t6 <- sbox[(a5 >> 16) & 0xff] << 16
+    xor         t0, t0, t6              // t0 <- t0 ^ ( sbox[(a5 >> 16) & 0xff] << 16)
+    xor         t1, t1, t0              // update the rkey words
+    xor         t2, t2, t1              // update the rkey words
+    xor         t3, t3, t2              // update the rkey words
+    addi        sp, sp, -16             // store rkey words on stack, to be packed later
+    sw          t0, 0(sp)               // store 5th rkey word
+    sw          t1, 4(sp)               // store 6th rkey word
+    sw          t2, 8(sp)               // store 7th rkey word
+    sw          t3, 12(sp)              // store 8th rkey word
+    ret
+
+
+/******************************************************************************
+* AES-128 key schedule according to the barrel-shiftrows representation. 
 *
 * The function prototype is:
-*   - void aes128_keyschedule_lut(uint32_t* rkeys, const uint8_t key);
+*   - void aes128_keyschedule_lut(uint32_t rkeys[352], const uint8_t key[16]);
 ******************************************************************************/
 .globl aes128_keyschedule_lut
 .type aes128_keyschedule_lut, %function
@@ -199,14 +315,14 @@ aes128_keyschedule_lut:
     srli        s9, t2, 6                   // mask for packing_rkey_loop
     srli        s10, t2, 7                  // mask for packing_rkey_loop
     jal         swapmove_rkey
-    spread_bits srli, srli, srli, t2, 0(a0) // extract and spread bits of t3-t6
+    spread_bits srli, srli, srli, t2        // extract and spread bits of t3-t6
     store_rkeys s1, s2, s3, s11, 0(a0)      // store round key words
-    spread_bits slli, srli, srli, s4, 4(a0) // extract and spread bits of t3-t6
+    spread_bits slli, srli, srli, s4        // extract and spread bits of t3-t6
     store_rkeys s1, s2, s3, s11, 4(a0)      // store round key words
-    spread_bits srli, slli, srli, s5, 8(a0) // extract and spread bits of t3-t6
+    spread_bits srli, slli, srli, s5        // extract and spread bits of t3-t6
     jal         redundant_code
     store_rkeys s1, s2, s3, s11, 24(a0)     // store round key words
-    spread_bits slli, slli, slli, s10,28(a0)// extract and spread bits of t3-t6
+    spread_bits slli, slli, slli, s10       // extract and spread bits of t3-t6
     store_rkeys s1, s2, s3, s11, 28(a0)     // store round key words
     addi        a0, a0, 128                 // points to the next rkey
 key_expansion:                              // key expansion routine
@@ -260,17 +376,17 @@ key_expansion:                              // key expansion routine
     xor         a4, a4, a3                  // update the rkey words
     xor         a5, a5, a4                  // update the rkey words
     jal         swapmove_rkey
-    spread_bits srli, srli, srli, t2, 0(a0) // extract and spread bits of t3-t6
+    spread_bits srli, srli, srli, t2        // extract and spread bits of t3-t6
     store_rkeys s1, s2, s3, s11, 0(a0)      // store round key words
-    spread_bits slli, srli, srli, s4, 4(a0) // extract and spread bits of t3-t6
+    spread_bits slli, srli, srli, s4        // extract and spread bits of t3-t6
     not_rkeys   s1, s2, s3, s11             // apply NOTs to speedup the sbox
     store_rkeys s1, s2, s3, s11, 4(a0)      // store round key words
-    spread_bits srli, slli, srli, s5, 8(a0) // extract and spread bits of t3-t6
+    spread_bits srli, slli, srli, s5        // extract and spread bits of t3-t6
     not_rkeys   s1, s2, s3, s11             // apply NOTs to speedup the sbox
     jal         redundant_code
     not_rkeys   s1, s2, s3, s11             // apply NOTs to speedup the sbox
     store_rkeys s1, s2, s3, s11, 24(a0)     // store round key words
-    spread_bits slli, slli, slli, s10,28(a0)// extract and spread bits of t3-t6
+    spread_bits slli, slli, slli, s10       // extract and spread bits of t3-t6
     not_rkeys   s1, s2, s3, s11             // apply NOTs to speedup the sbox
     store_rkeys s1, s2, s3, s11, 28(a0)     // store round key words
     addi        a0, a0, 128                 // points to the next rkey
@@ -293,3 +409,128 @@ key_expansion:                              // key expansion routine
     addi        sp, sp, 64                  // restore stack pointer
     ret                                     // exit
 .size aes128_keyschedule_lut,.-aes128_keyschedule_lut
+
+/******************************************************************************
+* AES-256 key schedule according to the barrel-shiftrows representation. 
+*
+* The function prototype is:
+*   - void aes256_keyschedule_lut(uint32_t rkeys[480], const uint8_t key[32]);
+******************************************************************************/
+.globl aes256_keyschedule_lut
+.type aes256_keyschedule_lut, %function
+.align 2
+aes256_keyschedule_lut:
+    addi        sp, sp, -64                 // allocate space on the stack
+    sw          a0, 0(sp)                   // save context
+    sw          a1, 4(sp)                   // save context
+    sw          s0, 8(sp)                   // save context
+    sw          s1, 12(sp)                  // save context
+    sw          s2, 16(sp)                  // save context
+    sw          s3, 20(sp)                  // save context
+    sw          s4, 24(sp)                  // save context
+    sw          s5, 28(sp)                  // save context
+    sw          s6, 32(sp)                  // save context
+    sw          s7, 36(sp)                  // save context
+    sw          s8, 40(sp)                  // save context
+    sw          s9, 44(sp)                  // save context
+    sw          s10, 48(sp)                 // save context
+    sw          s11, 52(sp)                 // save context
+    sw          ra, 56(sp)                  // save context
+    lw          a2, 0(a1)                   // load 1st key word
+    lw          a3, 4(a1)                   // load 2nd key word
+    lw          a4, 8(a1)                   // load 3rd key word
+    lw          a5, 12(a1)                  // load 4th key word
+    lw          t0, 16(a1)                  // load 5th key word
+    lw          t1, 20(a1)                  // load 6th key word
+    lw          t2, 24(a1)                  // load 7th key word
+    lw          t3, 28(a1)                  // load 8th key word
+    la          a6, sbox_lut                // load sbox address
+    la          a7, rconst_lut              // load rconst address
+    jal         aes256_rfunc_ks_0
+    jal         aes256_rfunc_ks_1
+    jal         aes256_rfunc_ks_0
+    jal         aes256_rfunc_ks_1
+    jal         aes256_rfunc_ks_0
+    jal         aes256_rfunc_ks_1
+    jal         aes256_rfunc_ks_0
+    jal         aes256_rfunc_ks_1
+    jal         aes256_rfunc_ks_0
+    jal         aes256_rfunc_ks_1
+    jal         aes256_rfunc_ks_0
+    jal         aes256_rfunc_ks_1
+    jal         aes256_rfunc_ks_0
+    // Now pack all round key to match the semi-fixsliced representation
+    li          t0, 0x00ff00ff              // load mask for SWAPMOVE routines
+    li          t1, 0x0000ffff              // load mask for SWAPMOVE routines
+    li          t2, 0x80808080              // mask for packing_rkey_loop
+    srli        s4, t2, 1                   // mask for packing_rkey_loop
+    srli        s5, t2, 2                   // mask for packing_rkey_loop
+    srli        s6, t2, 3                   // mask for packing_rkey_loop
+    srli        s7, t2, 4                   // mask for packing_rkey_loop
+    srli        s8, t2, 5                   // mask for packing_rkey_loop
+    srli        s9, t2, 6                   // mask for packing_rkey_loop
+    srli        s10, t2, 7                  // mask for packing_rkey_loop
+    lw          a2, 0(a1)                   // load 1st key word
+    lw          a3, 4(a1)                   // load 2nd key word
+    lw          a4, 8(a1)                   // load 3rd key word
+    lw          a5, 12(a1)                  // load 4th key word
+    jal         swapmove_rkey
+    spread_bits srli, srli, srli, t2        // extract and spread bits of t3-t6
+    store_rkeys s1, s2, s3, s11, 0(a0)      // store round key words
+    spread_bits slli, srli, srli, s4        // extract and spread bits of t3-t6
+    store_rkeys s1, s2, s3, s11, 4(a0)      // store round key words
+    spread_bits srli, slli, srli, s5        // extract and spread bits of t3-t6
+    jal         redundant_code
+    store_rkeys s1, s2, s3, s11, 24(a0)     // store round key words
+    spread_bits slli, slli, slli, s10       // extract and spread bits of t3-t6
+    store_rkeys s1, s2, s3, s11, 28(a0)     // store round key words
+    addi        a0, a0, 128                 // points to the next rkey
+    lw          a1, 212(sp)                 // restore key address
+    lw          a2, 16(a1)                  // load 5th key word
+    lw          a3, 20(a1)                  // load 6th key word
+    lw          a4, 24(a1)                  // load 7th key word
+    lw          a5, 28(a1)                  // load 8th key word
+    addi        s0, zero, 14
+    addi        sp, sp, 192                 // points to the 1st rkey to pack
+aes256_packing_rkeys:
+    addi        s0, s0, -1                  // dec loop counter
+    jal         swapmove_rkey
+    spread_bits srli, srli, srli, t2        // extract and spread bits of t3-t6
+    store_rkeys s1, s2, s3, s11, 0(a0)      // store round key words
+    spread_bits slli, srli, srli, s4        // extract and spread bits of t3-t6
+    not_rkeys   s1, s2, s3, s11             // apply NOTs to speedup the sbox
+    store_rkeys s1, s2, s3, s11, 4(a0)      // store round key words
+    spread_bits srli, slli, srli, s5        // extract and spread bits of t3-t6
+    not_rkeys   s1, s2, s3, s11             // apply NOTs to speedup the sbox
+    jal         redundant_code
+    not_rkeys   s1, s2, s3, s11             // apply NOTs to speedup the sbox
+    store_rkeys s1, s2, s3, s11, 24(a0)     // store round key words
+    spread_bits slli, slli, slli, s10       // extract and spread bits of t3-t6
+    not_rkeys   s1, s2, s3, s11             // apply NOTs to speedup the sbox
+    store_rkeys s1, s2, s3, s11, 28(a0)     // store round key words
+    lw          a2, 0(sp)                   // load next rkey words from the stack
+    lw          a3, 4(sp)                   // load next rkey words from the stack
+    lw          a4, 8(sp)                   // load next rkey words from the stack
+    lw          a5, 12(sp)                  // load next rkey words from the stack
+    addi        sp, sp, -16                 // points to the next rkey
+    addi        a0, a0, 128                 // points to the next rkey
+    bne         s0,zero,aes256_packing_rkeys// loop until necessary
+
+    addi        sp, sp, 304                 // restore stack pointer
+    lw          a0, -64(sp)                 // restore context
+    lw          a1, -60(sp)                 // restore context
+    lw          s0, -56(sp)                 // restore context
+    lw          s1, -52(sp)                 // restore context
+    lw          s2, -48(sp)                 // restore context
+    lw          s3, -44(sp)                 // restore context
+    lw          s4, -40(sp)                 // restore context
+    lw          s5, -36(sp)                 // restore context
+    lw          s6, -32(sp)                 // restore context
+    lw          s7, -28(sp)                 // restore context
+    lw          s8, -24(sp)                 // restore context
+    lw          s9, -20(sp)                 // restore context
+    lw          s10, -16(sp)                // restore context
+    lw          s11, -12(sp)                // restore context
+    lw          ra, -8(sp)
+    ret                                     // exit
+.size aes256_keyschedule_lut,.-aes256_keyschedule_lut

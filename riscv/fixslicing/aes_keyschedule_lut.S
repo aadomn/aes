@@ -1,6 +1,6 @@
 /******************************************************************************
-* RV32I assembly implememtations of the AES-128 key schedule according to
-* fixslicing.
+* RV32I assembly implementations of the AES-128 and AES-256 key schedules
+* according to fixslicing.
 *
 * Note that this implementation relies on Look-Up Tables (LUT) and therefore
 * might not run in constant-time on some platforms. See the 'aes_keyschedule.S'
@@ -11,7 +11,7 @@
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     July 2020
+* @date     August 2020
 ******************************************************************************/
 
 .data
@@ -88,7 +88,7 @@ rconst_lut:
     sw      s5, 20(a0)
     sw      s6, 24(a0)
     sw      s7, 28(a0)
-    addi    a0, a0, 32                      // points to the next rkey
+    addi    a0, a0, 32                  // points to the next rkey
 .endm
 
 /******************************************************************************
@@ -107,147 +107,266 @@ store_not_rkey:
     sw      s5, 20(a0)
     sw      s6, 24(a0)
     sw      s7, 28(a0)
-    addi    a0, a0, 32                      // points to the next rkey
+    addi    a0, a0, 32                  // points to the next rkey
     ret
 
 /******************************************************************************
 * Compute ShiftRows^(-1) on the entire round key in order to match fixslicing.
 ******************************************************************************/
 inv_shiftrows_1:
-    andi    s1, a2, 0xff                    // s1 <- rkey[i] & 0x000000ff
-    and     t6, a5, t3                      // t6 <- rkeys[i+3] & 0x0000ff00
-    or      s1, s1, t6                      // s1 <- s1 | t6
-    and     t6, a4, t4                      // t6 <- rkeys[i+2] & 0x00ff0000
-    or      s1, s1, t6                      // s1 <- s1 | t6
-    and     t6, a3, t5                      // t6 <- rkeys[i+1] & 0xff000000
-    or      s1, s1, t6                      // s1 <- s1 | t6
-    andi    s3, a3, 0xff                    // s3 <- rkeys[i+1] & 0x000000ff
-    and     t6, a2, t3                      // t6 <- rkeys[i] & 0x0000ff00
-    or      s3, s3, t6                      // s3 <- s3 | t6
-    and     t6, a5, t4                      // t6 <- rkeys[i+3] & 0x00ff0000
-    or      s3, s3, t6                      // s3 <- s3 | t6
-    and     t6, a4, t5                      // t6 <- rkeys[i+2] & 0xff000000
-    or      s3, s3, t6                      // s3 <- s3 | t6
-    andi    s5, a4, 0xff                    // s5 <- rkeys[i+2] & 0x000000ff
-    and     t6, a3, t3                      // t6 <- rkeys[i+1] & 0x0000ff00
-    or      s5, s5, t6                      // s5 <- s5 | t6
-    and     t6, a2, t4                      // t6 <- rkeys[i] & 0x00ff0000
-    or      s5, s5, t6                      // s5 <- s5 | t6
-    and     t6, a5, t5                      // t6 <- rkeys[i+3] & 0xff000000
-    or      s5, s5, t6                      // s5 <- s5 | t6
-    andi    s7, a5, 0xff                    // s7 <- rkeys[i+3] & 0x000000ff
-    and     t6, a4, t3                      // t6 <- rkeys[i+2] & 0x0000ff00
-    or      s7, s7, t6                      // s7 <- s7 | t6
-    and     t6, a3, t4                      // t6 <- rkeys[i+1] & 0x00ff0000
-    or      s7, s7, t6                      // s7 <- s7 | t6
-    and     t6, a2, t5                      // t6 <- rkeys[i] & 0xff000000
-    or      s7, s7, t6                      // s7 <- s7 | t6
+    andi    s1, a2, 0xff                // s1 <- rkey[i] & 0x000000ff
+    and     t6, a5, t3                  // t6 <- rkeys[i+3] & 0x0000ff00
+    or      s1, s1, t6                  // s1 <- s1 | t6
+    and     t6, a4, t4                  // t6 <- rkeys[i+2] & 0x00ff0000
+    or      s1, s1, t6                  // s1 <- s1 | t6
+    and     t6, a3, t5                  // t6 <- rkeys[i+1] & 0xff000000
+    or      s1, s1, t6                  // s1 <- s1 | t6
+    andi    s3, a3, 0xff                // s3 <- rkeys[i+1] & 0x000000ff
+    and     t6, a2, t3                  // t6 <- rkeys[i] & 0x0000ff00
+    or      s3, s3, t6                  // s3 <- s3 | t6
+    and     t6, a5, t4                  // t6 <- rkeys[i+3] & 0x00ff0000
+    or      s3, s3, t6                  // s3 <- s3 | t6
+    and     t6, a4, t5                  // t6 <- rkeys[i+2] & 0xff000000
+    or      s3, s3, t6                  // s3 <- s3 | t6
+    andi    s5, a4, 0xff                // s5 <- rkeys[i+2] & 0x000000ff
+    and     t6, a3, t3                  // t6 <- rkeys[i+1] & 0x0000ff00
+    or      s5, s5, t6                  // s5 <- s5 | t6
+    and     t6, a2, t4                  // t6 <- rkeys[i] & 0x00ff0000
+    or      s5, s5, t6                  // s5 <- s5 | t6
+    and     t6, a5, t5                  // t6 <- rkeys[i+3] & 0xff000000
+    or      s5, s5, t6                  // s5 <- s5 | t6
+    andi    s7, a5, 0xff                // s7 <- rkeys[i+3] & 0x000000ff
+    and     t6, a4, t3                  // t6 <- rkeys[i+2] & 0x0000ff00
+    or      s7, s7, t6                  // s7 <- s7 | t6
+    and     t6, a3, t4                  // t6 <- rkeys[i+1] & 0x00ff0000
+    or      s7, s7, t6                  // s7 <- s7 | t6
+    and     t6, a2, t5                  // t6 <- rkeys[i] & 0xff000000
+    or      s7, s7, t6                  // s7 <- s7 | t6
     ret
 
 /******************************************************************************
 * Compute ShiftRows^(-2) on the entire round key in order to match fixslicing.
 ******************************************************************************/
 inv_shiftrows_2:
-    and     s1, a2, s10                     // s1 <- rkey[i] & 0x00ff00ff
-    and     t6, a4, s11                     // t6 <- rkey[i+2] & 0xff00ff00
-    or      s1, s1, t6                      // s1 <- s1 | t6
-    and     s3, a3, s10                     // s3 <- rkey[i+1] & 0x00ff00ff
-    and     t6, a5, s11                     // t6 <- rkey[i+3] & 0xff00ff00
-    or      s3, s3, t6                      // s3 <- s3 | t6
-    and     s5, a4, s10                     // s5 <- rkey[i+2] & 0x00ff00ff
-    and     t6, a2, s11                     // t6 <- rkey[i] & 0xff00ff00
-    or      s5, s5, t6                      // s5 <- s5 | t6
-    and     s7, a5, s10                     // s7 <- rkey[i+3] & 0x00ff00ff
-    and     t6, a3, s11                     // t6 <- rkey[i+1] & 0xff00ff00
-    or      s7, s7, t6                      // s7 <- s7 | t6
+    and     s1, a2, s10                 // s1 <- rkey[i] & 0x00ff00ff
+    and     t6, a4, s11                 // t6 <- rkey[i+2] & 0xff00ff00
+    or      s1, s1, t6                  // s1 <- s1 | t6
+    and     s3, a3, s10                 // s3 <- rkey[i+1] & 0x00ff00ff
+    and     t6, a5, s11                 // t6 <- rkey[i+3] & 0xff00ff00
+    or      s3, s3, t6                  // s3 <- s3 | t6
+    and     s5, a4, s10                 // s5 <- rkey[i+2] & 0x00ff00ff
+    and     t6, a2, s11                 // t6 <- rkey[i] & 0xff00ff00
+    or      s5, s5, t6                  // s5 <- s5 | t6
+    and     s7, a5, s10                 // s7 <- rkey[i+3] & 0x00ff00ff
+    and     t6, a3, s11                 // t6 <- rkey[i+1] & 0xff00ff00
+    or      s7, s7, t6                  // s7 <- s7 | t6
     ret
 
 /******************************************************************************
 * Compute ShiftRows^(-3) on the entire round key in order to match fixslicing.
 ******************************************************************************/
 inv_shiftrows_3:
-    andi    s1, a2, 0xff                    // s1 <- rkey[i] & 0x000000ff
-    and     t6, a3, t3                      // t6 <- rkeys[i+1] & 0x0000ff00
-    or      s1, s1, t6                      // s1 <- s1 | t6
-    and     t6, a4, t4                      // t6 <- rkeys[i+2] & 0x00ff0000
-    or      s1, s1, t6                      // s1 <- s1 | t6
-    and     t6, a5, t5                      // t6 <- rkeys[i+3] & 0xff000000
-    or      s1, s1, t6                      // s1 <- s1 | t6
-    andi    s3, a3, 0xff                    // s3 <- rkeys[i+1] & 0x000000ff
-    and     t6, a4, t3                      // t6 <- rkeys[i+2] & 0x0000ff00
-    or      s3, s3, t6                      // s3 <- s3 | t6
-    and     t6, a5, t4                      // t6 <- rkeys[i+3] & 0x00ff0000
-    or      s3, s3, t6                      // s3 <- s3 | t6
-    and     t6, a2, t5                      // t6 <- rkeys[i] & 0xff000000
-    or      s3, s3, t6                      // s3 <- s3 | t6
-    andi    s5, a4, 0xff                    // s5 <- rkeys[i+2] & 0x000000ff
-    and     t6, a5, t3                      // t6 <- rkeys[i+3] & 0x0000ff00
-    or      s5, s5, t6                      // s5 <- s5 | t6
-    and     t6, a2, t4                      // t6 <- rkeys[i] & 0x00ff0000
-    or      s5, s5, t6                      // s5 <- s5 | t6
-    and     t6, a3, t5                      // t6 <- rkeys[i+1] & 0xff000000
-    or      s5, s5, t6                      // s5 <- s5 | t6
-    andi    s7, a5, 0xff                    // s7 <- rkeys[i+3] & 0x000000ff
-    and     t6, a2, t3                      // t6 <- rkeys[i] & 0x0000ff00
-    or      s7, s7, t6                      // s7 <- s7 | t6
-    and     t6, a3, t4                      // t6 <- rkeys[i+1] & 0x00ff0000
-    or      s7, s7, t6                      // s7 <- s7 | t6
-    and     t6, a4, t5                      // t6 <- rkeys[i+2] & 0xff000000
-    or      s7, s7, t6                      // s7 <- s7 | t6
+    andi    s1, a2, 0xff                // s1 <- rkey[i] & 0x000000ff
+    and     t6, a3, t3                  // t6 <- rkeys[i+1] & 0x0000ff00
+    or      s1, s1, t6                  // s1 <- s1 | t6
+    and     t6, a4, t4                  // t6 <- rkeys[i+2] & 0x00ff0000
+    or      s1, s1, t6                  // s1 <- s1 | t6
+    and     t6, a5, t5                  // t6 <- rkeys[i+3] & 0xff000000
+    or      s1, s1, t6                  // s1 <- s1 | t6
+    andi    s3, a3, 0xff                // s3 <- rkeys[i+1] & 0x000000ff
+    and     t6, a4, t3                  // t6 <- rkeys[i+2] & 0x0000ff00
+    or      s3, s3, t6                  // s3 <- s3 | t6
+    and     t6, a5, t4                  // t6 <- rkeys[i+3] & 0x00ff0000
+    or      s3, s3, t6                  // s3 <- s3 | t6
+    and     t6, a2, t5                  // t6 <- rkeys[i] & 0xff000000
+    or      s3, s3, t6                  // s3 <- s3 | t6
+    andi    s5, a4, 0xff                // s5 <- rkeys[i+2] & 0x000000ff
+    and     t6, a5, t3                  // t6 <- rkeys[i+3] & 0x0000ff00
+    or      s5, s5, t6                  // s5 <- s5 | t6
+    and     t6, a2, t4                  // t6 <- rkeys[i] & 0x00ff0000
+    or      s5, s5, t6                  // s5 <- s5 | t6
+    and     t6, a3, t5                  // t6 <- rkeys[i+1] & 0xff000000
+    or      s5, s5, t6                  // s5 <- s5 | t6
+    andi    s7, a5, 0xff                // s7 <- rkeys[i+3] & 0x000000ff
+    and     t6, a2, t3                  // t6 <- rkeys[i] & 0x0000ff00
+    or      s7, s7, t6                  // s7 <- s7 | t6
+    and     t6, a3, t4                  // t6 <- rkeys[i+1] & 0x00ff0000
+    or      s7, s7, t6                  // s7 <- s7 | t6
+    and     t6, a4, t5                  // t6 <- rkeys[i+2] & 0xff000000
+    or      s7, s7, t6                  // s7 <- s7 | t6
     ret
 
 /******************************************************************************
 * Execute a round of the AES-128 key schedule in the classical representation.
+* The key words are contained in registers a2-a5.
 ******************************************************************************/
-key_expansion:
-    andi        s8, a5, 0xff                // s8 <- a5 & 0xff
-    andi        t6, s8, 0xfc                // ensure a 4-byte aligned address
-    add         t6, t6, a6                  // t6 points to the right sbox address
-    lw          t6, 0(t6)                   // t6 <- sbox[a5 & 0xfc]
-    andi        s8, s8, 0x03                // mask to extract the shift value
-    slli        s8, s8, 3                   // shift to compute the shift value
-    srl         t6, t6, s8                  // shift the 32-bit word
-    andi        t6, t6, 0xff                // extract the right byte
-    slli        t6, t6, 24                  // t6 <- sbox[a5 & 0xff] << 24
-    xor         a2, a2, t6                  // a2 <- a2 ^ (sbox[a5 & 0xff] << 24)
-    srli        s8, a5, 8                   // s8 <- a5 >> 8
-    andi        s8, s8, 0xff                // s8 <- (a5 >> 8) & 0xff
-    andi        t6, s8, 0xfc                
-    add         t6, t6, a6                  // t6 points to the right sbox address
-    lw          t6, 0(t6)                   // t6 <- sbox[a5 & 0xff]
-    andi        s8, s8, 0x03
-    slli        s8, s8, 3
-    srl         t6, t6, s8
-    andi        t6, t6, 0xff
-    xor         a2, a2, t6                  // a2 <- a2 ^ t6
-    srli        s8, a5, 24                  // s8 <- a5 >> 24
-    andi        s8, s8, 0xff                // s8 <- (a5 >> 24) & 0xff
-    andi        t6, s8, 0xfc                
-    add         t6, t6, a6                  // t6 points to the right sbox address
-    lw          t6, 0(t6)                   // t6 <- sbox[a5 & 0xff]
-    andi        s8, s8, 0x03
-    slli        s8, s8, 3
-    srl         t6, t6, s8
-    andi        t6, t6, 0xff
-    slli        t6, t6, 16                  // t6 <- sbox[(a5 >> 24) & 0xff] << 16
-    xor         a2, a2, t6                  // a2 <- a2 ^ (sbox[(a5 >> 24) & 0xff] << 16)
-    srl         s8, a5, 16                  // s8 <- a5 >> 16
-    andi        s8, s8, 0xff                // s8 <- (a5 >> 16) & 0xff
-    andi        t6, s8, 0xfc                
-    add         t6, t6, a6                  // t6 points to the right sbox address
-    lw          t6, 0(t6)                   // t6 <- sbox[a5 & 0xff]
-    andi        s8, s8, 0x03
-    slli        s8, s8, 3
-    srl         t6, t6, s8
-    andi        t6, t6, 0xff
-    slli        t6, t6, 8                   // t6 <- sbox[(a5 >> 16) & 0xff] << 8
-    xor         a2, a2, t6                  // a2 <- a2 ^ ( sbox[(a5 >> 16) & 0xff] << 8)
-    lw          t6, 0(a7)                   // load rconst
-    xor         a2, a2, t6                  // add rconst
-    addi        a7, a7, 4                   // point to the next rconst
-    xor         a3, a3, a2                  // update the rkey words
-    xor         a4, a4, a3                  // update the rkey words
-    xor         a5, a5, a4                  // update the rkey words
+aes128_rfunc_ks:
+    andi    s8, a5, 0xff                // s8 <- a5 & 0xff
+    andi    t6, s8, 0xfc                // ensure a 4-byte aligned address
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[a5 & 0xfc]
+    andi    s8, s8, 0x03                // mask to extract the shift value
+    slli    s8, s8, 3                   // shift to compute the shift value
+    srl     t6, t6, s8                  // shift the 32-bit word
+    andi    t6, t6, 0xff                // extract the right byte
+    slli    t6, t6, 24                  // t6 <- sbox[a5 & 0xff] << 24
+    xor     a2, a2, t6                  // a2 <- a2 ^ (sbox[a5 & 0xff] << 24)
+    srli    s8, a5, 8                   // s8 <- a5 >> 8
+    andi    s8, s8, 0xff                // s8 <- (a5 >> 8) & 0xff
+    andi    t6, s8, 0xfc                
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[a5 & 0xff]
+    andi    s8, s8, 0x03
+    slli    s8, s8, 3
+    srl     t6, t6, s8
+    andi    t6, t6, 0xff
+    xor     a2, a2, t6                  // a2 <- a2 ^ t6
+    srli    s8, a5, 24                  // s8 <- a5 >> 24
+    andi    s8, s8, 0xff                // s8 <- (a5 >> 24) & 0xff
+    andi    t6, s8, 0xfc                
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[a5 & 0xff]
+    andi    s8, s8, 0x03
+    slli    s8, s8, 3
+    srl     t6, t6, s8
+    andi    t6, t6, 0xff
+    slli    t6, t6, 16                  // t6 <- sbox[(a5 >> 24) & 0xff] << 16
+    xor     a2, a2, t6                  // a2 <- a2 ^ (sbox[(a5 >> 24) & 0xff] << 16)
+    srl     s8, a5, 16                  // s8 <- a5 >> 16
+    andi    s8, s8, 0xff                // s8 <- (a5 >> 16) & 0xff
+    andi    t6, s8, 0xfc                
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[a5 & 0xff]
+    andi    s8, s8, 0x03
+    slli    s8, s8, 3
+    srl     t6, t6, s8
+    andi    t6, t6, 0xff
+    slli    t6, t6, 8                   // t6 <- sbox[(a5 >> 16) & 0xff] << 8
+    xor     a2, a2, t6                  // a2 <- a2 ^ ( sbox[(a5 >> 16) & 0xff] << 8)
+    lw      t6, 0(a7)                   // load rconst
+    xor     a2, a2, t6                  // add rconst
+    addi    a7, a7, 4                   // point to the next rconst
+    xor     a3, a3, a2                  // update the rkey words
+    xor     a4, a4, a3                  // update the rkey words
+    xor     a5, a5, a4                  // update the rkey words
+    ret
+
+/******************************************************************************
+* Round function of the AES-256 key schedule in the classical representation
+* for rounds i s.t. i % 2 == 0. The key words are contained in registers a2-a5.
+******************************************************************************/
+aes256_rfunc_ks_0:
+    andi    s8, t3, 0xff                // s8 <- t3 & 0xff
+    andi    t6, s8, 0xfc                // ensure a 4-byte aligned address
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[t3 & 0xfc]
+    andi    s8, s8, 0x03                // mask to extract the shift value
+    slli    s8, s8, 3                   // shift to compute the shift value
+    srl     t6, t6, s8                  // shift the 32-bit word
+    andi    t6, t6, 0xff                // extract the right byte
+    slli    t6, t6, 24                  // t6 <- sbox[t3 & 0xff] << 24
+    xor     a2, a2, t6                  // a2 <- a2 ^ (sbox[t3 & 0xff] << 24)
+    srli    s8, t3, 8                   // s8 <- t3 >> 8
+    andi    s8, s8, 0xff                // s8 <- (t3 >> 8) & 0xff
+    andi    t6, s8, 0xfc                
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[t3 & 0xff]
+    andi    s8, s8, 0x03
+    slli    s8, s8, 3
+    srl     t6, t6, s8
+    andi    t6, t6, 0xff
+    xor     a2, a2, t6                  // a2 <- a2 ^ t6
+    srli    s8, t3, 24                  // s8 <- t3 >> 24
+    andi    s8, s8, 0xff                // s8 <- (t3 >> 24) & 0xff
+    andi    t6, s8, 0xfc                
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[t3 & 0xff]
+    andi    s8, s8, 0x03
+    slli    s8, s8, 3
+    srl     t6, t6, s8
+    andi    t6, t6, 0xff
+    slli    t6, t6, 16                  // t6 <- sbox[(t3 >> 24) & 0xff] << 16
+    xor     a2, a2, t6                  // a2 <- a2 ^ (sbox[(t3 >> 24) & 0xff] << 16)
+    srl     s8, t3, 16                  // s8 <- t3 >> 16
+    andi    s8, s8, 0xff                // s8 <- (t3 >> 16) & 0xff
+    andi    t6, s8, 0xfc                
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[t3 & 0xff]
+    andi    s8, s8, 0x03
+    slli    s8, s8, 3
+    srl     t6, t6, s8
+    andi    t6, t6, 0xff
+    slli    t6, t6, 8                   // t6 <- sbox[(t3 >> 16) & 0xff] << 8
+    xor     a2, a2, t6                  // a2 <- a2 ^ ( sbox[(t3 >> 16) & 0xff] << 8)
+    lw      t6, 0(a7)                   // load rconst
+    xor     a2, a2, t6                  // add rconst
+    addi    a7, a7, 4                   // point to the next rconst
+    xor     a3, a3, a2                  // update the rkey words
+    xor     a4, a4, a3                  // update the rkey words
+    xor     a5, a5, a4                  // update the rkey words
+    addi    sp, sp, -16                 // store rkey words on stack, to be packed later
+    sw      a2, 0(sp)                   // store 1st rkey word
+    sw      a3, 4(sp)                   // store 2nd rkey word
+    sw      a4, 8(sp)                   // store 3rd rkey word
+    sw      a5, 12(sp)                  // store 4th rkey word
+    ret
+
+/******************************************************************************
+* Round function of the AES-256 key schedule in the classical representation
+* for rounds i s.t. i % 2 == 1. The key words are contained in registers t0-t3.
+* It differs from 'aes256_rfunc_ks_0' by omitting the RotWord operation.
+******************************************************************************/
+aes256_rfunc_ks_1:
+    andi    s8, a5, 0xff                // s8 <- a5 & 0xff
+    andi    t6, s8, 0xfc                // ensure a 4-byte aligned address
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[a5 & 0xfc]
+    andi    s8, s8, 0x03                // mask to extract the shift value
+    slli    s8, s8, 3                   // shift to compute the shift value
+    srl     t6, t6, s8                  // shift the 32-bit word
+    andi    t6, t6, 0xff                // extract the right byte
+    xor     t0, t0, t6                  // t0 <- t0 ^ (sbox[a5 & 0xff])
+    srli    s8, a5, 8                   // s8 <- a5 >> 8
+    andi    s8, s8, 0xff                // s8 <- (a5 >> 8) & 0xff
+    andi    t6, s8, 0xfc                
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[a5 & 0xff]
+    andi    s8, s8, 0x03
+    slli    s8, s8, 3
+    srl     t6, t6, s8
+    andi    t6, t6, 0xff
+    slli    t6, t6, 8
+    xor     t0, t0, t6                  // t0 <- t0 ^ t6
+    srli    s8, a5, 24                  // s8 <- a5 >> 24
+    andi    s8, s8, 0xff                // s8 <- (a5 >> 24) & 0xff
+    andi    t6, s8, 0xfc                
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[a5 & 0xff]
+    andi    s8, s8, 0x03
+    slli    s8, s8, 3
+    srl     t6, t6, s8
+    andi    t6, t6, 0xff
+    slli    t6, t6, 24                  // t6 <- sbox[(a5 >> 24) & 0xff] << 24
+    xor     t0, t0, t6                  // t0 <- t0 ^ (sbox[(a5 >> 24) & 0xff] << 24)
+    srl     s8, a5, 16                  // s8 <- a5 >> 16
+    andi    s8, s8, 0xff                // s8 <- (a5 >> 16) & 0xff
+    andi    t6, s8, 0xfc                
+    add     t6, t6, a6                  // t6 points to the right sbox address
+    lw      t6, 0(t6)                   // t6 <- sbox[a5 & 0xff]
+    andi    s8, s8, 0x03
+    slli    s8, s8, 3
+    srl     t6, t6, s8
+    andi    t6, t6, 0xff
+    slli    t6, t6, 16                  // t6 <- sbox[(a5 >> 16) & 0xff] << 16
+    xor     t0, t0, t6                  // t0 <- t0 ^ ( sbox[(a5 >> 16) & 0xff] << 16)
+    xor     t1, t1, t0                  // update the rkey words
+    xor     t2, t2, t1                  // update the rkey words
+    xor     t3, t3, t2                  // update the rkey words
+    addi    sp, sp, -16                 // store rkey words on stack, to be packed later
+    sw      t0, 0(sp)                   // store 5th rkey word
+    sw      t1, 4(sp)                   // store 6th rkey word
+    sw      t2, 8(sp)                   // store 7th rkey word
+    sw      t3, 12(sp)                  // store 8th rkey word
     ret
 
 /******************************************************************************
@@ -276,140 +395,279 @@ subpacking_rkey:
  .endm
 
 /******************************************************************************
-* Expansion of the encryption key according to the fully-fixsliced representa-
-* tion. 
+* AES-128 key schedule according to the fully-fixsliced representation.
+* The key schedule is done in the classical representation. At the end of each
+* round, the current round key is packed to match the fully-fixsliced (ffs)
+* representation.
 *
 * The function prototype is:
-*   - void aes128_keyschedule_ffs_lut(uint32_t* rkeys, const uint8_t key);
+*   - void aes128_keyschedule_ffs_lut(uint32_t* rkeys, const uint8_t* key);
 ******************************************************************************/
 .globl aes128_keyschedule_ffs_lut
 .type aes128_keyschedule_ffs_lut, %function
 .align 2
 aes128_keyschedule_ffs_lut:
-    addi        sp, sp, -64                 // allocate space on the stack
-    sw          a0, 0(sp)                   // save context
-    sw          a1, 4(sp)                   // save context
-    sw          s0, 8(sp)                   // save context
-    sw          s1, 12(sp)                  // save context
-    sw          s2, 16(sp)                  // save context
-    sw          s3, 20(sp)                  // save context
-    sw          s4, 24(sp)                  // save context
-    sw          s5, 28(sp)                  // save context
-    sw          s6, 32(sp)                  // save context
-    sw          s7, 36(sp)                  // save context
-    sw          s8, 40(sp)                  // save context
-    sw          ra, 44(sp)                  // save context
-    sw          s10, 48(sp)                 // save context
-    sw          s11, 52(sp)                 // save context
-    sw          s9, 56(sp)                  // save context
-    addi        s9, zero, 2                 // init loop counter
-    lw          a2, 0(a1)                   // load 1st key word
-    lw          a3, 4(a1)                   // load 2nd key word
-    lw          a4, 8(a1)                   // load 3rd key word
-    lw          a5, 12(a1)                  // load 4th key word
-    la          a6, sbox_lut                // load sbox address
-    la          a7, rconst_lut              // load rconst address
-    li          t0, 0x55555555              // mask for SWAPMOVE routines
-    li          t1, 0x33333333              // mask for SWAPMOVE routines
-    li          t2, 0x0f0f0f0f              // mask for packing_rkey_loop
-    li          t3, 0x0000ff00              // mask for inv_shiftrows_1/3
-    slli        t4, t3, 8                   // mask for inv_shiftrows_1/3
-    slli        t5, t3, 16                  // mask for inv_shiftrows_1/3
-    li          s10, 0x00ff00ff             // mask for inv_shiftrows_2
-    slli        s11, s10, 8                 // mask for inv_shiftrows_2
-    packing_rkey a2, a3, a4, a5
+    addi            sp, sp, -64             // allocate space on the stack
+    sw              a0, 0(sp)               // save context
+    sw              a1, 4(sp)               // save context
+    sw              s0, 8(sp)               // save context
+    sw              s1, 12(sp)              // save context
+    sw              s2, 16(sp)              // save context
+    sw              s3, 20(sp)              // save context
+    sw              s4, 24(sp)              // save context
+    sw              s5, 28(sp)              // save context
+    sw              s6, 32(sp)              // save context
+    sw              s7, 36(sp)              // save context
+    sw              s8, 40(sp)              // save context
+    sw              ra, 44(sp)              // save context
+    sw              s10, 48(sp)             // save context
+    sw              s11, 52(sp)             // save context
+    sw              s9, 56(sp)              // save context
+    addi            s9, zero, 2             // init loop counter
+    lw              a2, 0(a1)               // load 1st key word
+    lw              a3, 4(a1)               // load 2nd key word
+    lw              a4, 8(a1)               // load 3rd key word
+    lw              a5, 12(a1)              // load 4th key word
+    la              a6, sbox_lut            // load sbox address
+    la              a7, rconst_lut          // load rconst address
+    li              t0, 0x55555555          // mask for SWAPMOVE routines
+    li              t1, 0x33333333          // mask for SWAPMOVE routines
+    li              t2, 0x0f0f0f0f          // mask for packing_rkey_loop
+    li              t3, 0x0000ff00          // mask for inv_shiftrows_1/3
+    slli            t4, t3, 8               // mask for inv_shiftrows_1/3
+    slli            t5, t3, 16              // mask for inv_shiftrows_1/3
+    li              s10, 0x00ff00ff         // mask for inv_shiftrows_2
+    slli            s11, s10, 8             // mask for inv_shiftrows_2
+    packing_rkey    a2, a3, a4, a5
     store_rkey
 key_exp_loop_ffs:
     addi            s9, s9, -1              // decrement loop counter
-    jal             key_expansion
+    jal             aes128_rfunc_ks
     jal             inv_shiftrows_1         // inv_shiftrows to match semi-fixslicing
     packing_rkey    s1, s3, s5, s7
     jal             store_not_rkey
-    jal             key_expansion
+    jal             aes128_rfunc_ks
     jal             inv_shiftrows_2         // inv_shiftrows to match semi-fixslicing
     packing_rkey    s1, s3, s5, s7
     jal             store_not_rkey
-    jal             key_expansion
+    jal             aes128_rfunc_ks
     jal             inv_shiftrows_3         // inv_shiftrows to match semi-fixslicing
     packing_rkey    s1, s3, s5, s7
     jal             store_not_rkey
-    jal             key_expansion
+    jal             aes128_rfunc_ks
     packing_rkey    a2, a3, a4, a5
     jal             store_not_rkey
     bne             s9, zero, key_exp_loop_ffs
-    jal             key_expansion
+    jal             aes128_rfunc_ks
     jal             inv_shiftrows_1         // inv_shiftrows to match semi-fixslicing
     packing_rkey    s1, s3, s5, s7
     jal             store_not_rkey
-    jal             key_expansion
+    jal             aes128_rfunc_ks
     packing_rkey    a2, a3, a4, a5
     jal             store_not_rkey
-    lw          a0, 0(sp)                   // restore context
-    lw          a1, 4(sp)                   // restore context
-    lw          s0, 8(sp)                   // restore context
-    lw          s1, 12(sp)                  // restore context
-    lw          s2, 16(sp)                  // restore context
-    lw          s3, 20(sp)                  // restore context
-    lw          s4, 24(sp)                  // restore context
-    lw          s5, 28(sp)                  // restore context
-    lw          s6, 32(sp)                  // restore context
-    lw          s7, 36(sp)                  // restore context
-    lw          s8, 40(sp)                  // restore context
-    lw          ra, 44(sp)                  // restore context
-    lw          s10, 48(sp)                 // restore context
-    lw          s11, 52(sp)                 // restore context
-    lw          s9, 56(sp)                  // restore context
-    addi        sp, sp, 64                  // restore stack pointer
+    lw              a0, 0(sp)               // restore context
+    lw              a1, 4(sp)               // restore context
+    lw              s0, 8(sp)               // restore context
+    lw              s1, 12(sp)              // restore context
+    lw              s2, 16(sp)              // restore context
+    lw              s3, 20(sp)              // restore context
+    lw              s4, 24(sp)              // restore context
+    lw              s5, 28(sp)              // restore context
+    lw              s6, 32(sp)              // restore context
+    lw              s7, 36(sp)              // restore context
+    lw              s8, 40(sp)              // restore context
+    lw              ra, 44(sp)              // restore context
+    lw              s10, 48(sp)             // restore context
+    lw              s11, 52(sp)             // restore context
+    lw              s9, 56(sp)              // restore context
+    addi            sp, sp, 64              // restore stack pointer
     ret                                     // exit
 .size aes128_keyschedule_ffs_lut,.-aes128_keyschedule_ffs_lut
 
 /******************************************************************************
-* Expansion of the encryption key according to the semi-fixsliced representa-
-* tion. 
+* AES-256 key schedule according to the fully-fixsliced representation.
+* Contrary to the AES-128 key schedule defined above, because the key state is
+* 256-bit long, we first run the entire key schedule in the classical
+* representation and then pack all round keys at the end. Note that it requires
+* 208 additional bytes on the stack.
 *
 * The function prototype is:
-*   - void aes128_keyschedule_sfs_lut(uint32_t* rkeys, const uint8_t key);
+*   - void aes256_keyschedule_ffs_lut(uint32_t* rkeys, const uint8_t* key);
+******************************************************************************/
+.globl aes256_keyschedule_ffs_lut
+.type aes256_keyschedule_ffs_lut, %function
+.align 2
+aes256_keyschedule_ffs_lut:
+    addi            sp, sp, -64             // allocate space on the stack
+    sw              a0, 0(sp)               // save context
+    sw              a1, 4(sp)               // save context
+    sw              s0, 8(sp)               // save context
+    sw              s1, 12(sp)              // save context
+    sw              s2, 16(sp)              // save context
+    sw              s3, 20(sp)              // save context
+    sw              s4, 24(sp)              // save context
+    sw              s5, 28(sp)              // save context
+    sw              s6, 32(sp)              // save context
+    sw              s7, 36(sp)              // save context
+    sw              s8, 40(sp)              // save context
+    sw              ra, 44(sp)              // save context
+    sw              s10, 48(sp)             // save context
+    sw              s11, 52(sp)             // save context
+    sw              s9, 56(sp)              // save context
+    lw              a2, 0(a1)               // load 1st key word
+    lw              a3, 4(a1)               // load 2nd key word
+    lw              a4, 8(a1)               // load 3rd key word
+    lw              a5, 12(a1)              // load 4th key word
+    lw              t0, 16(a1)              // load 5th key word
+    lw              t1, 20(a1)              // load 6th key word
+    lw              t2, 24(a1)              // load 7th key word
+    lw              t3, 28(a1)              // load 8th key word
+    la              a6, sbox_lut            // load sbox address
+    la              a7, rconst_lut          // load rconst address
+    // AES-256 key expansion the classical representation
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    // Now pack all round key to match the semi-fixsliced representation
+    li              t0, 0x55555555          // mask for SWAPMOVE routines
+    li              t1, 0x33333333          // mask for SWAPMOVE routines
+    li              t2, 0x0f0f0f0f          // mask for packing_rkey_loop
+    li              t3, 0x0000ff00          // mask for inv_shiftrows_1/3
+    slli            t4, t3, 8               // mask for inv_shiftrows_1/3
+    slli            t5, t3, 16              // mask for inv_shiftrows_1/3
+    li              s10, 0x00ff00ff         // mask for inv_shiftrows_2
+    slli            s11, s10, 8             // mask for inv_shiftrows_2
+    lw              a2, 0(a1)               // load 1st key word
+    lw              a3, 4(a1)               // load 2nd key word
+    lw              a4, 8(a1)               // load 3rd key word
+    lw              a5, 12(a1)              // load 4th key word
+    packing_rkey    a2, a3, a4, a5
+    store_rkey
+    lw              a2, 16(a1)
+    lw              a3, 20(a1)
+    lw              a4, 24(a1)
+    lw              a5, 28(a1)
+    jal             inv_shiftrows_1         // inv_shiftrows to match semi-fixslicing
+    packing_rkey    s1, s3, s5, s7
+    jal             store_not_rkey
+    addi            sp, sp, 144
+    addi            s9, zero, 3             // init loop counter
+aes256_packing_loop_ffs:
+    addi            s9, s9, -1              // decrement loop counter
+    lw              a2, 48(sp)
+    lw              a3, 52(sp)
+    lw              a4, 56(sp)
+    lw              a5, 60(sp)
+    jal             inv_shiftrows_2
+    packing_rkey    s1, s3, s5, s7
+    jal             store_not_rkey
+    lw              a2, 32(sp)
+    lw              a3, 36(sp)
+    lw              a4, 40(sp)
+    lw              a5, 44(sp)
+    jal             inv_shiftrows_3
+    packing_rkey    s1, s3, s5, s7
+    jal             store_not_rkey
+    lw              a2, 16(sp)
+    lw              a3, 20(sp)
+    lw              a4, 24(sp)
+    lw              a5, 28(sp)
+    packing_rkey    a2, a3, a4, a5
+    jal             store_not_rkey
+    lw              a2, 0(sp)
+    lw              a3, 4(sp)
+    lw              a4, 8(sp)
+    lw              a5, 12(sp)
+    jal             inv_shiftrows_1
+    packing_rkey    s1, s3, s5, s7
+    jal             store_not_rkey
+    addi            sp, sp, -64             // points to the next rkey
+    bne             s9, zero, aes256_packing_loop_ffs
+    lw              a2, 48(sp)
+    lw              a3, 52(sp)
+    lw              a4, 56(sp)
+    lw              a5, 60(sp)
+    packing_rkey    a2, a3, a4, a5
+    jal             store_not_rkey
+    addi            sp, sp, 256             // restore stack pointer
+    lw              a0, 0(sp)               // restore context
+    lw              a1, 4(sp)               // restore context
+    lw              s0, 8(sp)               // restore context
+    lw              s1, 12(sp)              // restore context
+    lw              s2, 16(sp)              // restore context
+    lw              s3, 20(sp)              // restore context
+    lw              s4, 24(sp)              // restore context
+    lw              s5, 28(sp)              // restore context
+    lw              s6, 32(sp)              // restore context
+    lw              s7, 36(sp)              // restore context
+    lw              s8, 40(sp)              // restore context
+    lw              ra, 44(sp)              // restore context
+    lw              s10, 48(sp)             // restore context
+    lw              s11, 52(sp)             // restore context
+    lw              s9, 56(sp)              // restore context
+    addi            sp, sp, 64              // restore stack pointer
+    ret                                     // exit
+.size aes256_keyschedule_ffs_lut,.-aes256_keyschedule_ffs_lut
+
+/******************************************************************************
+* AES-128 key schedule according to the fully-fixsliced representation.
+* The key schedule is done in the classical representation. At the end of each
+* round, the current round key is packed to match the semi-fixsliced (sfs)
+* representation.
+*
+* The function prototype is:
+*   - void aes128_keyschedule_sfs_lut(uint32_t* rkeys, const uint8_t* key);
 ******************************************************************************/
 .globl aes128_keyschedule_sfs_lut
 .type aes128_keyschedule_sfs_lut, %function
 .align 2
 aes128_keyschedule_sfs_lut:
-    addi        sp, sp, -56                 // allocate space on the stack
-    sw          a0, 0(sp)                   // save context
-    sw          a1, 4(sp)                   // save context
-    sw          s0, 8(sp)                   // save context
-    sw          s1, 12(sp)                  // save context
-    sw          s2, 16(sp)                  // save context
-    sw          s3, 20(sp)                  // save context
-    sw          s4, 24(sp)                  // save context
-    sw          s5, 28(sp)                  // save context
-    sw          s6, 32(sp)                  // save context
-    sw          s7, 36(sp)                  // save context
-    sw          s8, 40(sp)                  // save context
-    sw          s9, 44(sp)                  // save context
-    sw          ra, 48(sp)                  // save context
-    addi        s9, zero, 5                 // set key_expansion_loop counter
-    lw          a2, 0(a1)                   // load 1st key word
-    lw          a3, 4(a1)                   // load 2nd key word
-    lw          a4, 8(a1)                   // load 3rd key word
-    lw          a5, 12(a1)                  // load 4th key word
-    la          a6, sbox_lut                // load sbox address
-    la          a7, rconst_lut              // load rconst address
-    li          t0, 0x55555555              // mask for SWAPMOVE routines
-    li          t1, 0x33333333              // mask for SWAPMOVE routines
-    li          t2, 0x0f0f0f0f              // mask for packing_rkey_loop
-    li          t3, 0x0000ff00              // mask for inv_shiftrows_1
-    slli        t4, t3, 8                   // mask for inv_shiftrows_1
-    slli        t5, t3, 16                  // mask for inv_shiftrows_1
-    packing_rkey a2, a3, a4, a5
+    addi            sp, sp, -56             // allocate space on the stack
+    sw              a0, 0(sp)               // save context
+    sw              a1, 4(sp)               // save context
+    sw              s0, 8(sp)               // save context
+    sw              s1, 12(sp)              // save context
+    sw              s2, 16(sp)              // save context
+    sw              s3, 20(sp)              // save context
+    sw              s4, 24(sp)              // save context
+    sw              s5, 28(sp)              // save context
+    sw              s6, 32(sp)              // save context
+    sw              s7, 36(sp)              // save context
+    sw              s8, 40(sp)              // save context
+    sw              s9, 44(sp)              // save context
+    sw              ra, 48(sp)              // save context
+    addi            s9, zero, 5             // set aes128_rfunc_ks_loop counter
+    lw              a2, 0(a1)               // load 1st key word
+    lw              a3, 4(a1)               // load 2nd key word
+    lw              a4, 8(a1)               // load 3rd key word
+    lw              a5, 12(a1)              // load 4th key word
+    la              a6, sbox_lut            // load sbox address
+    la              a7, rconst_lut          // load rconst address
+    li              t0, 0x55555555          // mask for SWAPMOVE routines
+    li              t1, 0x33333333          // mask for SWAPMOVE routines
+    li              t2, 0x0f0f0f0f          // mask for packing_rkey_loop
+    li              t3, 0x0000ff00          // mask for inv_shiftrows_1
+    slli            t4, t3, 8               // mask for inv_shiftrows_1
+    slli            t5, t3, 16              // mask for inv_shiftrows_1
+    packing_rkey    a2, a3, a4, a5
     store_rkey
 key_exp_loop_sfs:
     addi            s9, s9, -1              // decrement loop counter
-    jal             key_expansion
+    jal             aes128_rfunc_ks
     jal             inv_shiftrows_1         // inv_shiftrows to match semi-fixslicing
     packing_rkey    s1, s3, s5, s7
     jal             store_not_rkey
-    jal             key_expansion
+    jal             aes128_rfunc_ks
     packing_rkey    a2, a3, a4, a5
     jal             store_not_rkey
     bne             s9, zero, key_exp_loop_sfs
@@ -429,3 +687,124 @@ key_exp_loop_sfs:
     addi        sp, sp, 56                  // restore stack pointer
     ret                                     // exit
 .size aes128_keyschedule_sfs_lut,.-aes128_keyschedule_sfs_lut
+
+/******************************************************************************
+* AES-256 key schedule according to the semi-fixsliced representation.
+* Contrary to the AES-128 key schedule defined above, because the key state is
+* 256-bit long, we first run the entire key schedule in the classical
+* representation and then pack all round keys at the end. Note that it requires
+* 208 additional bytes on the stack.
+*
+* The function prototype is:
+*   - void aes256_keyschedule_sfs_lut(uint32_t* rkeys, const uint8_t* key);
+******************************************************************************/
+.globl aes256_keyschedule_sfs_lut
+.type aes256_keyschedule_sfs_lut, %function
+.align 2
+aes256_keyschedule_sfs_lut:
+    addi            sp, sp, -64             // allocate space on the stack
+    sw              a0, 0(sp)               // save context
+    sw              a1, 4(sp)               // save context
+    sw              s0, 8(sp)               // save context
+    sw              s1, 12(sp)              // save context
+    sw              s2, 16(sp)              // save context
+    sw              s3, 20(sp)              // save context
+    sw              s4, 24(sp)              // save context
+    sw              s5, 28(sp)              // save context
+    sw              s6, 32(sp)              // save context
+    sw              s7, 36(sp)              // save context
+    sw              s8, 40(sp)              // save context
+    sw              ra, 44(sp)              // save context
+    sw              s10, 48(sp)             // save context
+    sw              s11, 52(sp)             // save context
+    sw              s9, 56(sp)              // save context
+    lw              a2, 0(a1)               // load 1st key word
+    lw              a3, 4(a1)               // load 2nd key word
+    lw              a4, 8(a1)               // load 3rd key word
+    lw              a5, 12(a1)              // load 4th key word
+    lw              t0, 16(a1)              // load 5th key word
+    lw              t1, 20(a1)              // load 6th key word
+    lw              t2, 24(a1)              // load 7th key word
+    lw              t3, 28(a1)              // load 8th key word
+    la              a6, sbox_lut            // load sbox address
+    la              a7, rconst_lut          // load rconst address
+    // AES-256 key expansion the classical representation
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    jal             aes256_rfunc_ks_1
+    jal             aes256_rfunc_ks_0
+    // Now pack all round key to match the semi-fixsliced representation
+    li              t0, 0x55555555          // mask for SWAPMOVE routines
+    li              t1, 0x33333333          // mask for SWAPMOVE routines
+    li              t2, 0x0f0f0f0f          // mask for packing_rkey_loop
+    li              t3, 0x0000ff00          // mask for inv_shiftrows_1/3
+    slli            t4, t3, 8               // mask for inv_shiftrows_1/3
+    slli            t5, t3, 16              // mask for inv_shiftrows_1/3
+    li              s10, 0x00ff00ff         // mask for inv_shiftrows_2
+    slli            s11, s10, 8             // mask for inv_shiftrows_2
+    lw              a2, 0(a1)               // load 1st key word
+    lw              a3, 4(a1)               // load 2nd key word
+    lw              a4, 8(a1)               // load 3rd key word
+    lw              a5, 12(a1)              // load 4th key word
+    packing_rkey    a2, a3, a4, a5
+    store_rkey
+    lw              a2, 16(a1)
+    lw              a3, 20(a1)
+    lw              a4, 24(a1)
+    lw              a5, 28(a1)
+    jal             inv_shiftrows_1         // inv_shiftrows to match semi-fixslicing
+    packing_rkey    s1, s3, s5, s7
+    jal             store_not_rkey
+    addi            sp, sp, 176
+    addi            s9, zero, 6             // init loop counter
+aes256_packing_loop_sfs:
+    addi            s9, s9, -1              // decrement loop counter
+    lw              a2, 16(sp)
+    lw              a3, 20(sp)
+    lw              a4, 24(sp)
+    lw              a5, 28(sp)
+    packing_rkey    a2, a3, a4, a5
+    jal             store_not_rkey
+    lw              a2, 0(sp)
+    lw              a3, 4(sp)
+    lw              a4, 8(sp)
+    lw              a5, 12(sp)
+    jal             inv_shiftrows_1
+    packing_rkey    s1, s3, s5, s7
+    jal             store_not_rkey
+    addi            sp, sp, -32             // points to the next rkey
+    bne             s9, zero, aes256_packing_loop_sfs
+    lw              a2, 16(sp)
+    lw              a3, 20(sp)
+    lw              a4, 24(sp)
+    lw              a5, 28(sp)
+    packing_rkey    a2, a3, a4, a5
+    jal             store_not_rkey
+    addi            sp, sp, 224             // restore stack pointer
+    lw              a0, 0(sp)               // restore context
+    lw              a1, 4(sp)               // restore context
+    lw              s0, 8(sp)               // restore context
+    lw              s1, 12(sp)              // restore context
+    lw              s2, 16(sp)              // restore context
+    lw              s3, 20(sp)              // restore context
+    lw              s4, 24(sp)              // restore context
+    lw              s5, 28(sp)              // restore context
+    lw              s6, 32(sp)              // restore context
+    lw              s7, 36(sp)              // restore context
+    lw              s8, 40(sp)              // restore context
+    lw              ra, 44(sp)              // restore context
+    lw              s10, 48(sp)             // restore context
+    lw              s11, 52(sp)             // restore context
+    lw              s9, 56(sp)              // restore context
+    addi            sp, sp, 64              // restore stack pointer
+    ret                                     // exit
+.size aes256_keyschedule_sfs_lut,.-aes256_keyschedule_sfs_lut

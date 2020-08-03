@@ -1,6 +1,6 @@
 /******************************************************************************
-* Bitsliced AES-128 implementation in RV32I assembly language, using the base
-* instruction set only (no RISC-V extension needed).
+* Bitsliced AES-128 and AES-256 (encryption-only) implementations in RV32I
+* assembly, using the base instruction set only (no RISC-V extension needed).
 *
 * The implementation relies on the barrel-shiftrows representation introduced 
 * in the following article: https:// 
@@ -8,7 +8,7 @@
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     June 2020
+* @date     August 2020
 ******************************************************************************/
 
 .text
@@ -527,7 +527,7 @@ packing_loop_2:                             // for(i = 24; i >= 0; i)
     addi        sp, sp, 32                  // now points to state[0]
     addi        ra, zero, 40                // set main loop counter
     xor         a0, a2, zero                // put the rkeys address in a0
-aes128_addroundkey_sbox:                    // for(j = 0; j < 40; j)
+aes128_addroundkey_sbox:                    // for(j = 40; j > 0; j)
     addi        ra, ra, -1                  // j <- j - 1
     addroundkey s0,s1,s2,s3,s4,s5,s6,s7,0(a0), t0,t1
     addi        a0, a0, 32                  // points to the next rkey
@@ -694,233 +694,261 @@ unpacking_loop_0:                           // for (i = 0; i < 8; i)
 .size aes128_encrypt,.-aes128_encrypt
 
 /******************************************************************************
-* Encrypts 8 blocks at a time using AESb-128, without any operation mode.
+* Encrypts 8 blocks at a time using AES-256, without any operation mode.
 *
 * The function prototype is:
-*   - void aes128_enc_8(uint8_t* out, const uint8_t* in, const uint32_t* rkeys)
+*   - void aes256_encrypt(uint8_t*, const uint8_t*, const uint32_t*)
 ******************************************************************************/
-/*
-.globl aesb128_enc_8
-.type aesb128_enc_8, %function
+.globl aes256_encrypt
+.type aes256_encrypt, %function
 .align 2
-aesb128_enc_8:
-    addi        sp, sp, -192
-    sw          ra, 60(sp)
-    sw          a1, 56(sp)
-    sw          a0, 52(sp)
-    sw          a2, 48(sp)
-    sw          s0, 44(sp)
-    sw          s1, 40(sp)
-    sw          s2, 36(sp)
-    sw          s3, 32(sp)
-    sw          s4, 28(sp)
-    sw          s5, 24(sp)
-    sw          s6, 20(sp)
-    sw          s7, 16(sp)
-    sw          s8, 12(sp)
-    sw          s9, 8(sp)
-    sw          s10, 4(sp)
-    sw          s11, 0(sp)
-    lw          s0, 0(a1)
-    lw          s1, 4(a1)
-    lw          s2, 8(a1)
-    lw          s3, 12(a1)
-    lw          s4, 16(a1)
-    lw          s5, 20(a1)
-    lw          s6, 24(a1)
-    lw          s7, 28(a1)
-    addi        a1, a1, 32
-    addi        a5, a1, 96
-    addi        sp, sp, 96
-load_state:
-    lw          t0, 0(a1)
-    lw          t1, 4(a1)
-    lw          t2, 8(a1)
-    lw          t3, 12(a1)
-    lw          t4, 16(a1)
-    lw          t5, 20(a1)
-    lw          t6, 24(a1)
-    lw          a7, 28(a1)
-    sw          t0, 0(sp)
-    sw          t1, 4(sp)
-    sw          t2, 8(sp)
-    sw          t3, 12(sp)
-    sw          t4, 16(sp)
-    sw          t5, 20(sp)
-    sw          t6, 24(sp)
-    sw          a7, 28(sp)
-    addi        sp, sp, 32
-    addi        a1, a1, 32
-    bne         a5, a1, load_state
-    addi        sp, sp, -128
-
-    addi        ra, zero, 40
-    xor         a0, a2, zero        // put the rkeys address in a0
-    // core routine
-aesb128_addroundkey_sbox:
-    addi        ra, ra, -1
-    addroundkey s0,s1,s2,s3,s4,s5,s6,s7, 0(a0), t0,t1
-    addi        a0, a0, 32          // points to the next rkey
+aes256_encrypt:
+    addi    sp, sp, -192                    // allocate space on the stack
+    sw      ra, 60(sp)                      // save context
+    sw      a1, 56(sp)                      // save context
+    sw      a0, 52(sp)                      // save context
+    sw      a2, 48(sp)                      // save context
+    sw      s0, 44(sp)                      // save context
+    sw      s1, 40(sp)                      // save context
+    sw      s2, 36(sp)                      // save context
+    sw      s3, 32(sp)                      // save context
+    sw      s4, 28(sp)                      // save context
+    sw      s5, 24(sp)                      // save context
+    sw      s6, 20(sp)                      // save context
+    sw      s7, 16(sp)                      // save context
+    sw      s8, 12(sp)                      // save context
+    sw      s9, 8(sp)                       // save context
+    sw      s10, 4(sp)                      // save context
+    sw      s11, 0(sp)                      // save context
+    addi    sp, sp, 64                      // now points to the internal state
+    addi    a5, a1, 128                     // set packing_loop_0 counter
+    li      t4, 0x00ff00ff                  // mask for SWAPMOVE
+aes256_packing_loop0:                       // for(i=0; i < 8; i) 
+    lw          s0, 0(a1)                   // load input word
+    lw          s1, 4(a1)                   // load input word
+    lw          s2, 8(a1)                   // load input word
+    lw          s3, 12(a1)                  // load input word
+    addi        a1, a1, 16                  // now points to the next input word
+    swapmove    s0, s1, s0, s1, t4, 8, a6   // SWAPMOVE(s0, s1, 0x00ff00ff, 8)
+    swapmove    s2, s3, s2, s3, t4, 8, a6   // SWAPMOVE(s2, s3, 0x00ff00ff, 8)
+    sw          s0, 0(sp)                   // state[i] <- s0
+    sw          s1, 32(sp)                  // state[i+8] <- s1
+    sw          s2, 64(sp)                  // state[i+16] <- s2
+    sw          s3, 96(sp)                  // state[i+24] <- s3
+    addi        sp, sp, 4                   // i <- i+1
+    bne         a1, a5, aes256_packing_loop0// loop until i <8
+    addi        sp, sp, -32                 // i <- 0
+    addi        a5, sp, 64                  // set packing_loop_1 counter
+    li          t4, 0x0000ffff              // mask for SWAPMOVE
+aes256_packing_loop1:                       // for(i = 0; i < 16; i) 
+    lw          s0, 0(sp)                   // load state[i]
+    lw          s1, 64(sp)                  // load state[i+16]
+    swapmove    s0, s1, s0, s1, t4, 16, a6  // SWAPMOVE(s0, s1, 0x0000ffff, 16)
+    sw          s0, 0(sp)                   // store state[i]
+    sw          s1, 64(sp)                  // store state[i+16]
+    addi        sp, sp, 4                   // i <- i + 1
+    bne         sp, a5, aes256_packing_loop1// loop until i < 16
+    li          t4, 0x55555555              // mask for SWAPMOVE
+    li          t5, 0x33333333              // mask for SWAPMOVE
+    li          t6, 0x0f0f0f0f              // mask for SWAPMOVE
+    addi        sp, sp, 32                  // points to state[24]
+    addi        a5, sp, -128                // set packing_loop_2 counter
+aes256_packing_loop2:                       // for(i = 24; i >= 0; i)
+    lw          s0, 0(sp)                   // load state[i]
+    lw          s1, 4(sp)                   // load state[i+1]
+    lw          s2, 8(sp)                   // load state[i+2]
+    lw          s3, 12(sp)                  // load state[i+3]
+    lw          s4, 16(sp)                  // load state[i+4]
+    lw          s5, 20(sp)                  // load state[i+5]
+    lw          s6, 24(sp)                  // load state[i+6]
+    lw          s7, 28(sp)                  // load state[i+7]
+    swapmove    s1, s0, s1, s0, t4, 1, a6   // SWAPMOVE(s1, s0, 0x55555555, 1)
+    swapmove    s3, s2, s3, s2, t4, 1, a6   // SWAPMOVE(s3, s2, 0x55555555, 1)
+    swapmove    s5, s4, s5, s4, t4, 1, a6   // SWAPMOVE(s5, s4, 0x55555555, 1)
+    swapmove    s7, s6, s7, s6, t4, 1, a6   // SWAPMOVE(s7, s6, 0x55555555, 1)
+    swapmove    s2, s0, s2, s0, t5, 2, a6   // SWAPMOVE(s2, s0, 0x33333333, 2)
+    swapmove    s3, s1, s3, s1, t5, 2, a6   // SWAPMOVE(s3, s1, 0x33333333, 2)
+    swapmove    s6, s4, s6, s4, t5, 2, a6   // SWAPMOVE(s6, s4, 0x33333333, 2)
+    swapmove    s7, s5, s7, s5, t5, 2, a6   // SWAPMOVE(s7, s5, 0x33333333, 2)
+    swapmove    s4, s0, s4, s0, t6, 4, a6   // SWAPMOVE(s4, s0, 0x0f0f0f0f, 4)
+    swapmove    s5, s1, s5, s1, t6, 4, a6   // SWAPMOVE(s5, s1, 0x0f0f0f0f, 4)
+    swapmove    s6, s2, s6, s2, t6, 4, a6   // SWAPMOVE(s6, s2, 0x0f0f0f0f, 4)
+    swapmove    s7, s3, s7, s3, t6, 4, a6   // SWAPMOVE(s7, s3, 0x0f0f0f0f, 4)
+    sw          s0, 0(sp)                   // store state[i]
+    sw          s1, 4(sp)                   // store state[i+1]
+    sw          s2, 8(sp)                   // store state[i+2]
+    sw          s3, 12(sp)                  // store state[i+3]
+    sw          s4, 16(sp)                  // store state[i+4]
+    sw          s5, 20(sp)                  // store state[i+5]
+    sw          s6, 24(sp)                  // store state[i+6]
+    sw          s7, 28(sp)                  // store state[i+7]
+    addi        sp, sp, -32                 // i <- i - 8
+    bne         sp, a5, aes256_packing_loop2// loop until i >= 0
+    addi        sp, sp, 32                  // now points to state[0]
+    addi        ra, zero, 56                // set main loop counter
+    xor         a0, a2, zero                // put the rkeys address in a0
+aes256_addroundkey_sbox:                    // for(j = 56; j >0; j)
+    addi        ra, ra, -1                  // j <- j - 1
+    addroundkey s0,s1,s2,s3,s4,s5,s6,s7,0(a0), t0,t1
+    addi        a0, a0, 32                  // points to the next rkey
     sbox        s0,s1,s2,s3,s4,s5,s6,s7, t0,t1,t2,t3,t4,t5,t6,a1,a2,a3,a4,a5,a6,a7,s8,s9,s10,s11
-    addi        sp, sp, 32
-    andi        s11, ra, 3          // if 'ra' is a multiple of 4
-    beqz        s11, aesb128_linear_layer   // then jump to the linear layer
-    sw          s0, -32(sp)
-    sw          s1, -28(sp)
-    sw          s2, -24(sp)
-    sw          s3, -20(sp)
-    sw          s4, -16(sp)
-    sw          s5, -12(sp)
-    sw          s6, -8(sp)
-    sw          s7, -4(sp)
-    lw          s0, 0(sp)
-    lw          s1, 4(sp)
-    lw          s2, 8(sp)
-    lw          s3, 12(sp)
-    lw          s4, 16(sp)
-    lw          s5, 20(sp)
-    lw          s6, 24(sp)
-    lw          s7, 28(sp)
-    j           aesb128_addroundkey_sbox
-aesb128_linear_layer:
-    shiftrows
-    beqz         ra, last_addroundkey      // omit mixcolumns for the last round
-    mixcolumns
-    j           aesb128_addroundkey_sbox
-last_addroundkey:
-    // last addroundkey
+    addi        sp, sp, 32                  // i <- i + 8
+    andi        s11, ra, 3                  // if(j % 4 == 0)
+    beqz        s11, aes256_linear_layer    // then jump to the linear layer
+    sw          s0, -32(sp)                 // store state[i-8]
+    sw          s1, -28(sp)                 // store state[i-7]
+    sw          s2, -24(sp)                 // store state[i-6]
+    sw          s3, -20(sp)                 // store state[i-5]
+    sw          s4, -16(sp)                 // store state[i-4]
+    sw          s5, -12(sp)                 // store state[i-3]
+    sw          s6, -8(sp)                  // store state[i-2]
+    sw          s7, -4(sp)                  // store state[i-1]
+    lw          s0, 0(sp)                   // load state[i]
+    lw          s1, 4(sp)                   // load state[i+1]
+    lw          s2, 8(sp)                   // load state[i+2]
+    lw          s3, 12(sp)                  // load state[i+3]
+    lw          s4, 16(sp)                  // load state[i+4]
+    lw          s5, 20(sp)                  // load state[i+5]
+    lw          s6, 24(sp)                  // load state[i+6]
+    lw          s7, 28(sp)                  // load state[i+7]
+    j           aes256_addroundkey_sbox     // ark and sbox on the rest of the state
+aes256_linear_layer:
+    shiftrows                               // shiftrows on the entire state
+    beqz         ra, aes256_unpacking       // omit mixcolumns during last round
+    mixcolumns                              // mixcolumns on the entire state
+    j           aes256_addroundkey_sbox     // go to next round
+aes256_unpacking:
     addroundkey s0,s1,s2,s3,s4,s5,s6,s7, 32(a0), t0,t1
-    sw          s0, 32(sp)
-    sw          s1, 36(sp)
-    sw          s2, 40(sp)
-    sw          s3, 44(sp)
-    sw          s4, 48(sp)
-    sw          s5, 52(sp)
-    sw          s6, 56(sp)
-    sw          s7, 60(sp)
-    lw          s1, 68(sp)
-    lw          s2, 72(sp)
-    lw          s3, 76(sp)
-    lw          s4, 80(sp)
-    lw          s5, 84(sp)
-    lw          s6, 88(sp)
+    sw          s0, 32(sp)                  // store state[8] after last addroundkey
+    sw          s1, 36(sp)                  // store state[9] after last addroundkey
+    sw          s2, 40(sp)                  // store state[10] after last addroundkey
+    sw          s3, 44(sp)                  // store state[11] after last addroundkey
+    sw          s4, 48(sp)                  // store state[12] after last addroundkey
+    sw          s5, 52(sp)                  // store state[13] after last addroundkey
+    sw          s6, 56(sp)                  // store state[14] after last addroundkey
+    sw          s7, 60(sp)                  // store state[15] after last addroundkey
+    lw          s1, 68(sp)                  // load state[17]
+    lw          s2, 72(sp)                  // load state[18]
+    lw          s3, 76(sp)                  // load state[19]
+    lw          s4, 80(sp)                  // load state[20]
+    lw          s5, 84(sp)                  // load state[21]
+    lw          s6, 88(sp)                  // load state[22]
     addroundkey s8,s1,s2,s3,s4,s5,s6,s10, 64(a0), t0,t1
-    sw          s8, 64(sp)
-    sw          s1, 68(sp)
-    sw          s2, 72(sp)
-    sw          s3, 76(sp)
-    sw          s4, 80(sp)
-    sw          s5, 84(sp)
-    sw          s6, 88(sp)
-    sw          s10, 92(sp)
-    lw          s1, 100(sp)
-    lw          s2, 104(sp)
-    lw          s3, 108(sp)
-    lw          s4, 112(sp)
-    lw          s5, 116(sp)
-    lw          s6, 120(sp)
+    sw          s8, 64(sp)                  // store state[16] after last addroundkey
+    sw          s1, 68(sp)                  // store state[17] after last addroundkey
+    sw          s2, 72(sp)                  // store state[18] after last addroundkey
+    sw          s3, 76(sp)                  // store state[19] after last addroundkey
+    sw          s4, 80(sp)                  // store state[20] after last addroundkey
+    sw          s5, 84(sp)                  // store state[21] after last addroundkey
+    sw          s6, 88(sp)                  // store state[22] after last addroundkey
+    sw          s10, 92(sp)                 // store state[23] after last addroundkey
+    lw          s1, 100(sp)                 // load state[25]
+    lw          s2, 104(sp)                 // load state[26]
+    lw          s3, 108(sp)                 // load state[27]
+    lw          s4, 112(sp)                 // load state[28]
+    lw          s5, 116(sp)                 // load state[29]
+    lw          s6, 120(sp)                 // load state[30]
     addroundkey s9,s1,s2,s3,s4,s5,s6,s11, 96(a0), t0,t1
-    sw          s9, 96(sp)
-    sw          s1, 100(sp)
-    sw          s2, 104(sp)
-    sw          s3, 108(sp)
-    sw          s4, 112(sp)
-    sw          s5, 116(sp)
-    sw          s6, 120(sp)
-    sw          s11, 124(sp)
-    lw          s0, 0(sp)
-    lw          s1, 4(sp)
-    lw          s2, 8(sp)
-    lw          s3, 12(sp)
-    lw          s4, 16(sp)
-    lw          s5, 20(sp)
-    lw          s6, 24(sp)
-    lw          s7, 28(sp)
+    sw          s9, 96(sp)                  // store state[24] after last addroundkey
+    sw          s1, 100(sp)                 // store state[25] after last addroundkey
+    sw          s2, 104(sp)                 // store state[26] after last addroundkey
+    sw          s3, 108(sp)                 // store state[27] after last addroundkey
+    sw          s4, 112(sp)                 // store state[28] after last addroundkey
+    sw          s5, 116(sp)                 // store state[29] after last addroundkey
+    sw          s6, 120(sp)                 // store state[30] after last addroundkey
+    sw          s11, 124(sp)                // store state[31] after last addroundkey
+    lw          s0, 0(sp)                   // load state[0]
+    lw          s1, 4(sp)                   // load state[1]
+    lw          s2, 8(sp)                   // load state[2]
+    lw          s3, 12(sp)                  // load state[3]
+    lw          s4, 16(sp)                  // load state[4]
+    lw          s5, 20(sp)                  // load state[5]
+    lw          s6, 24(sp)                  // load state[6]
+    lw          s7, 28(sp)                  // load state[7]
     addroundkey s0,s1,s2,s3,s4,s5,s6,s7, 0(a0), t0,t1
-    li          t4, 0x55555555
-    li          t5, 0x33333333
-    li          t6, 0x0f0f0f0f
-    addi        a5, sp, 128
-    j           unpacking_loop_2_bis
-unpacking_loop_2:                   //entering the unpacking routine
-    lw          s0, 0(sp)
-    lw          s1, 4(sp)
-    lw          s2, 8(sp)
-    lw          s3, 12(sp)
-    lw          s4, 16(sp)
-    lw          s5, 20(sp)
-    lw          s6, 24(sp)
-    lw          s7, 28(sp)
-unpacking_loop_2_bis:
-    swapmove    s4, s0, s4, s0, t6, 4, a6
-    swapmove    s5, s1, s5, s1, t6, 4, a6
-    swapmove    s6, s2, s6, s2, t6, 4, a6
-    swapmove    s7, s3, s7, s3, t6, 4, a6
-    swapmove    s2, s0, s2, s0, t5, 2, a6
-    swapmove    s3, s1, s3, s1, t5, 2, a6
-    swapmove    s6, s4, s6, s4, t5, 2, a6
-    swapmove    s7, s5, s7, s5, t5, 2, a6
-    swapmove    s1, s0, s1, s0, t4, 1, a6
-    swapmove    s3, s2, s3, s2, t4, 1, a6
-    swapmove    s5, s4, s5, s4, t4, 1, a6
-    swapmove    s7, s6, s7, s6, t4, 1, a6
-    sw          s0, 0(sp)
-    sw          s1, 4(sp)
-    sw          s2, 8(sp)
-    sw          s3, 12(sp)
-    sw          s4, 16(sp)
-    sw          s5, 20(sp)
-    sw          s6, 24(sp)
-    sw          s7, 28(sp)
-    addi        sp, sp, 32
-    bne         sp, a5, unpacking_loop_2
-    addi        sp, sp, -128
-    addi        a5, sp, 64
-    li          t4, 0x0000ffff
-unpacking_loop_1:
-    lw          s0, 0(sp)
-    lw          s1, 64(sp)
-    swapmove    s0, s1, s0, s1, t4, 16, a6
-    sw          s0, 0(sp)
-    sw          s1, 64(sp)
-    addi        sp, sp, 4
-    bne         sp, a5, unpacking_loop_1
-    addi        sp, sp, -64
-    lw          a0, -12(sp) // out
-    addi        a5, sp, 32
-    li          t4, 0x00ff00ff
-unpacking_loop_0:
-    lw          s0, 0(sp)
-    lw          s1, 32(sp)
-    lw          s2, 64(sp)
-    lw          s3, 96(sp)
-    addi        sp, sp, 4
-    swapmove    s0, s1, s0, s1, t4, 8, a6
-    swapmove    s2, s3, s2, s3, t4, 8, a6
-    sw          s0, 0(a0)
-    sw          s1, 4(a0)
-    sw          s2, 8(a0)
-    sw          s3, 12(a0)
-    addi        a0, a0, 16
-    bne         sp, a5, unpacking_loop_0
-    addi        sp, sp, -96
-    lw          ra, 60(sp)
-    lw          a0, 52(sp) // out
-    lw          a1, 56(sp)
-    lw          a2, 48(sp)
-    lw          s0, 44(sp)
-    lw          s1, 40(sp)
-    lw          s2, 36(sp)
-    lw          s3, 32(sp)
-    lw          s4, 28(sp)
-    lw          s5, 24(sp)
-    lw          s6, 20(sp)
-    lw          s7, 16(sp)
-    lw          s8, 12(sp)
-    lw          s9, 8(sp)
-    lw          s10, 4(sp)
-    lw          s11, 0(sp)
-    addi        sp, sp, 192
-    ret
-.size aesb128_enc_8,.-aesb128_enc_8
-*/
+    li          t4, 0x55555555              // mask for SWAPMOVE
+    li          t5, 0x33333333              // mask for SWAPMOVE
+    li          t6, 0x0f0f0f0f              // mask for SWAPMOVE
+    addi        a5, sp, 128                 // set unpacking_loop_2_bis counter
+    j           aes256_unpacking_loop2_bis  // state[0...7] already in s0-s7, no need loads
+aes256_unpacking_loop2:                     // for(i = 0; i < 32; i)
+    lw          s0, 0(sp)                   // load state[i]
+    lw          s1, 4(sp)                   // load state[i+1]
+    lw          s2, 8(sp)                   // load state[i+2]
+    lw          s3, 12(sp)                  // load state[i+3]
+    lw          s4, 16(sp)                  // load state[i+4]
+    lw          s5, 20(sp)                  // load state[i+5]
+    lw          s6, 24(sp)                  // load state[i+6]
+    lw          s7, 28(sp)                  // load state[i+7]
+aes256_unpacking_loop2_bis:
+    swapmove    s4, s0, s4, s0, t6, 4, a6   // SWAPMOVE(s4, s0, 0x0f0f0f0f, 4)
+    swapmove    s5, s1, s5, s1, t6, 4, a6   // SWAPMOVE(s5, s1, 0x0f0f0f0f, 4)
+    swapmove    s6, s2, s6, s2, t6, 4, a6   // SWAPMOVE(s6, s2, 0x0f0f0f0f, 4)
+    swapmove    s7, s3, s7, s3, t6, 4, a6   // SWAPMOVE(s7, s3, 0x0f0f0f0f, 4)
+    swapmove    s2, s0, s2, s0, t5, 2, a6   // SWAPMOVE(s2, s0, 0x33333333, 2)
+    swapmove    s3, s1, s3, s1, t5, 2, a6   // SWAPMOVE(s3, s1, 0x33333333, 2)
+    swapmove    s6, s4, s6, s4, t5, 2, a6   // SWAPMOVE(s6, s4, 0x33333333, 2)
+    swapmove    s7, s5, s7, s5, t5, 2, a6   // SWAPMOVE(s7, s5, 0x33333333, 2)
+    swapmove    s1, s0, s1, s0, t4, 1, a6   // SWAPMOVE(s1, s0, 0x55555555, 1)
+    swapmove    s3, s2, s3, s2, t4, 1, a6   // SWAPMOVE(s3, s2, 0x55555555, 1)
+    swapmove    s5, s4, s5, s4, t4, 1, a6   // SWAPMOVE(s5, s4, 0x55555555, 1)
+    swapmove    s7, s6, s7, s6, t4, 1, a6   // SWAPMOVE(s7, s6, 0x55555555, 1)
+    sw          s0, 0(sp)                   // store state[i]
+    sw          s1, 4(sp)                   // store state[i+1]
+    sw          s2, 8(sp)                   // store state[i+2]
+    sw          s3, 12(sp)                  // store state[i+3]
+    sw          s4, 16(sp)                  // store state[i+4]
+    sw          s5, 20(sp)                  // store state[i+5]
+    sw          s6, 24(sp)                  // store state[i+6]
+    sw          s7, 28(sp)                  // store state[i+7]
+    addi        sp, sp, 32                  // i <- i + 8
+    bne         sp,a5,aes256_unpacking_loop2// loop until i < 32
+    addi        sp, sp, -128                // points to state[0]
+    addi        a5, sp, 64                  // set unpacking_loop_1 counter
+    li          t4, 0x0000ffff              // mask for SWAPMOVE
+aes256_unpacking_loop1:                     // for(i = 0; i < 16; i)
+    lw          s0, 0(sp)                   // load state[i]
+    lw          s1, 64(sp)                  // load state[i+16]
+    swapmove    s0, s1, s0, s1, t4, 16, a6  // SWAPMOVE(s0, s1, 0x0000ffff, 16)
+    sw          s0, 0(sp)                   // store state[i]
+    sw          s1, 64(sp)                  // store state[i+16]
+    addi        sp, sp, 4                   // i <- i + 1
+    bne         sp,a5,aes256_unpacking_loop1// loop until i < 16
+    addi        sp, sp, -64                 // points to state[0]
+    lw          a0, -12(sp)                 // restore output address      
+    addi        a5, sp, 32                  // set unpacking_loop_0 counter
+    li          t4, 0x00ff00ff              // mask for SWAPMOVE
+aes256_unpacking_loop0:                     // for (i = 0; i < 8; i)
+    lw          s0, 0(sp)                   // load state[i]
+    lw          s1, 32(sp)                  // load state[i+8]
+    lw          s2, 64(sp)                  // load state[i+16]
+    lw          s3, 96(sp)                  // load state[i+24]
+    addi        sp, sp, 4                   // i <- i + 1
+    swapmove    s0, s1, s0, s1, t4, 8, a6   // SWAPMOVE(s0, s1, 0x00ff00ff, 8) 
+    swapmove    s2, s3, s2, s3, t4, 8, a6   // SWAPMOVE(s2, s3, 0x00ff00ff, 8) 
+    sw          s0, 0(a0)                   // store state[i] in output array
+    sw          s1, 4(a0)                   // store state[i+8] in output array
+    sw          s2, 8(a0)                   // store state[i+16] in output array
+    sw          s3, 12(a0)                  // store state[i+24] in output array
+    addi        a0, a0, 16                  // increments output array address
+    bne         sp,a5,aes256_unpacking_loop0// loop until i < 8
+    addi        sp, sp, -96                 // now points at the bottom of the stack
+    lw          ra, 60(sp)                  // restore context
+    lw          a0, 52(sp)                  // restore context
+    lw          a1, 56(sp)                  // restore context
+    lw          a2, 48(sp)                  // restore context
+    lw          s0, 44(sp)                  // restore context
+    lw          s1, 40(sp)                  // restore context
+    lw          s2, 36(sp)                  // restore context
+    lw          s3, 32(sp)                  // restore context
+    lw          s4, 28(sp)                  // restore context
+    lw          s5, 24(sp)                  // restore context
+    lw          s6, 20(sp)                  // restore context
+    lw          s7, 16(sp)                  // restore context
+    lw          s8, 12(sp)                  // restore context
+    lw          s9, 8(sp)                   // restore context
+    lw          s10, 4(sp)                  // restore context
+    lw          s11, 0(sp)                  // restore context
+    addi        sp, sp, 192                 // restore stack pointer
+    ret                                     // exit function
+.size aes256_encrypt,.-aes256_encrypt

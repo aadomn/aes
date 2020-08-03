@@ -1,13 +1,13 @@
 /******************************************************************************
-* Fixsliced AES-128 implementation in RV32I assembly language, using the base
-* instruction set only (no RISC-V extension needed).
+* Fixsliced AES-128 and AES-256 implementations (encryption-only) in RV32I
+* assembly language, using the base instruction set only.
 *
 * For more details about the implementations see https:// 
 *
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     July 2020
+* @date     August 2020
 ******************************************************************************/
 
 .text
@@ -666,6 +666,145 @@ aes128_encrypt_ffs:
 .size aes128_encrypt_ffs,.-aes128_encrypt_ffs
 
 /******************************************************************************
+* Fully-fixsliced implementation of AES-256.
+* Two blocks are encrypted in parallel, without any operating mode.
+*
+* The function prototype is:
+*   - void aes256_encrypt_ffs(uint8_t* out0, uint8_t* out1, const uint8_t* in0,
+                        const uint8_t* in1, const uint32_t* rkeys)
+******************************************************************************/
+.globl aes256_encrypt_ffs
+.type aes256_encrypt_ffs, %function
+.align 2
+aes256_encrypt_ffs:
+    addi sp, sp, -72
+    sw          ra, 68(sp)                  // save context
+    sw          a0, 64(sp)                  // save context
+    sw          a1, 60(sp)                  // save context
+    sw          a2, 56(sp)                  // save context
+    sw          a3, 52(sp)                  // save context
+    sw          a4, 48(sp)                  // save context
+    sw          s0, 44(sp)                  // save context
+    sw          s1, 40(sp)                  // save context
+    sw          s2, 36(sp)                  // save context
+    sw          s3, 32(sp)                  // save context
+    sw          s4, 28(sp)                  // save context
+    sw          s5, 24(sp)                  // save context
+    sw          s6, 20(sp)                  // save context
+    sw          s7, 16(sp)                  // save context
+    sw          s8, 12(sp)                  // save context
+    sw          s9, 8(sp)                   // save context
+    sw          s10, 4(sp)                  // save context
+    sw          s11, 0(sp)                  // save context
+    add         a0, a4, zero                // put rkeys address in a0
+    lw          s0, 0(a2)                   // load input word
+    lw          s1, 0(a3)                   // load input word
+    lw          s2, 4(a2)                   // load input word
+    lw          s3, 4(a3)                   // load input word
+    lw          s4, 8(a2)                   // load input word
+    lw          s5, 8(a3)                   // load input word
+    lw          s6, 12(a2)                  // load input word
+    lw          s7, 12(a3)                  // load input word
+    li          t0, 0x55555555              // mask for SWAPMOVE
+    li          t1, 0x33333333              // mask for SWAPMOVE
+    li          t2, 0x0f0f0f0f              // mask for SWAPMOVE
+    jal         packing_0
+    jal         packing_1
+    jal         packing_2
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         mixcolumns1
+    jal         ark_sbox
+    li          t5, 0x03030303              // mask for byte_rori
+    li          t4, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 2
+    addi        a3, a2, 4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         mixcolumns3
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         mixcolumns1
+    jal         ark_sbox
+    li          t5, 0x03030303              // mask for byte_rori
+    li          t4, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 2
+    addi        a3, a2, 4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         mixcolumns3
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         mixcolumns1
+    jal         ark_sbox
+    li          t5, 0x03030303              // mask for byte_rori
+    li          t4, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 2
+    addi        a3, a2, 4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         mixcolumns3
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         double_shiftrows            // double shiftrows for resynch
+    addroundkey s0,s1,s2,s3,s4,s5,s6,s7, 0(a0), s8,s9
+    li          t0, 0x55555555
+    li          t1, 0x33333333
+    li          t2, 0x0f0f0f0f
+    jal         packing_2
+    jal         packing_1
+    jal         packing_0
+    lw          a0, 64(sp)                  // restore pointer to output array
+    lw          a1, 60(sp)                  // restore pointer to output array
+    sw          s0, 0(a0)                   // store output
+    sw          s1, 0(a1)                   // store ouput
+    sw          s2, 4(a0)                   // store ouput
+    sw          s3, 4(a1)                   // store ouput
+    sw          s4, 8(a0)                   // store ouput
+    sw          s5, 8(a1)                   // store ouput
+    sw          s6, 12(a0)                  // store ouput
+    sw          s7, 12(a1)                  // store ouput
+    lw          ra, 68(sp)                  // save context
+    lw          a2, 56(sp)                  // save context
+    lw          a3, 52(sp)                  // save context
+    lw          a4, 48(sp)                  // save context
+    lw          s0, 44(sp)                  // restore context
+    lw          s1, 40(sp)                  // restore context
+    lw          s2, 36(sp)                  // restore context
+    lw          s3, 32(sp)                  // restore context
+    lw          s4, 28(sp)                  // restore context
+    lw          s5, 24(sp)                  // restore context
+    lw          s6, 20(sp)                  // restore context
+    lw          s7, 16(sp)                  // restore context
+    lw          s8, 12(sp)                  // restore context
+    lw          s9, 8(sp)                   // restore context
+    lw          s10, 4(sp)                  // restore context
+    lw          s11, 0(sp)                  // restore context
+    addi        sp, sp, 72
+    ret
+.size aes256_encrypt_ffs,.-aes256_encrypt_ffs
+
+/******************************************************************************
 * Semi-fixsliced implementation of AES-128.
 * Two blocks are encrypted in parallel, without any operating mode.
 *
@@ -791,3 +930,148 @@ aes128_encrypt_sfs:
     addi sp, sp, 72
     ret
 .size aes128_encrypt_sfs,.-aes128_encrypt_sfs
+
+/******************************************************************************
+* Semi-fixsliced implementation of AES-256.
+* Two blocks are encrypted in parallel, without any operating mode.
+*
+* The function prototype is:
+*   - void aes256_encrypt_sfs(uint8_t* out0, uint8_t* out1, const uint8_t* in0,
+                        const uint8_t* in1, const uint32_t* rkeys)
+******************************************************************************/
+.globl aes256_encrypt_sfs
+.type aes256_encrypt_sfs, %function
+.align 2
+aes256_encrypt_sfs:
+    addi sp, sp, -72
+    sw          ra, 68(sp)                  // save context
+    sw          a0, 64(sp)                  // save context
+    sw          a1, 60(sp)                  // save context
+    sw          a2, 56(sp)                  // save context
+    sw          a3, 52(sp)                  // save context
+    sw          a4, 48(sp)                  // save context
+    sw          s0, 44(sp)                  // save context
+    sw          s1, 40(sp)                  // save context
+    sw          s2, 36(sp)                  // save context
+    sw          s3, 32(sp)                  // save context
+    sw          s4, 28(sp)                  // save context
+    sw          s5, 24(sp)                  // save context
+    sw          s6, 20(sp)                  // save context
+    sw          s7, 16(sp)                  // save context
+    sw          s8, 12(sp)                  // save context
+    sw          s9, 8(sp)                   // save context
+    sw          s10, 4(sp)                  // save context
+    sw          s11, 0(sp)                  // save context
+    add         a0, a4, zero                // put rkeys address in a0
+    lw          s0, 0(a2)                   // load input word
+    lw          s1, 0(a3)                   // load input word
+    lw          s2, 4(a2)                   // load input word
+    lw          s3, 4(a3)                   // load input word
+    lw          s4, 8(a2)                   // load input word
+    lw          s5, 8(a3)                   // load input word
+    lw          s6, 12(a2)                  // load input word
+    lw          s7, 12(a3)                  // load input word
+    li          t0, 0x55555555              // mask for SWAPMOVE
+    li          t1, 0x33333333              // mask for SWAPMOVE
+    li          t2, 0x0f0f0f0f              // mask for SWAPMOVE
+    jal         packing_0
+    jal         packing_1
+    jal         packing_2
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         double_shiftrows            // shiftrows every 2 rounds
+    jal         mixcolumns3
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         double_shiftrows            // shiftrows every 2 rounds
+    jal         mixcolumns3
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         double_shiftrows            // shiftrows every 2 rounds
+    jal         mixcolumns3
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         double_shiftrows            // shiftrows every 2 rounds
+    jal         mixcolumns3
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         double_shiftrows            // shiftrows every 2 rounds
+    jal         mixcolumns3
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         double_shiftrows            // shiftrows every 2 rounds
+    jal         mixcolumns3
+    jal         ark_sbox
+    li          t4, 0x03030303              // mask for byte_rori
+    li          t5, 0x3f3f3f3f              // mask for byte_rori
+    addi        a2, zero, 6
+    addi        a3, a2, -4
+    jal         mixcolumns0
+    jal         ark_sbox
+    jal         double_shiftrows            // shiftrows every 2 rounds
+    addroundkey s0,s1,s2,s3,s4,s5,s6,s7, 0(a0), s8,s9
+    li          t0, 0x55555555
+    li          t1, 0x33333333
+    li          t2, 0x0f0f0f0f
+    jal         packing_2
+    jal         packing_1
+    jal         packing_0
+    lw          a0, 64(sp)                  // restore pointer to output array
+    lw          a1, 60(sp)                  // restore pointer to output array
+    sw          s0, 0(a0)                   // store output
+    sw          s1, 0(a1)                   // store ouput
+    sw          s2, 4(a0)                   // store ouput
+    sw          s3, 4(a1)                   // store ouput
+    sw          s4, 8(a0)                   // store ouput
+    sw          s5, 8(a1)                   // store ouput
+    sw          s6, 12(a0)                  // store ouput
+    sw          s7, 12(a1)                  // store ouput
+    lw          ra, 68(sp)                  // save context
+    lw          a2, 56(sp)                  // save context
+    lw          a3, 52(sp)                  // save context
+    lw          a4, 48(sp)                  // save context
+    lw          s0, 44(sp)                  // restore context
+    lw          s1, 40(sp)                  // restore context
+    lw          s2, 36(sp)                  // restore context
+    lw          s3, 32(sp)                  // restore context
+    lw          s4, 28(sp)                  // restore context
+    lw          s5, 24(sp)                  // restore context
+    lw          s6, 20(sp)                  // restore context
+    lw          s7, 16(sp)                  // restore context
+    lw          s8, 12(sp)                  // restore context
+    lw          s9, 8(sp)                   // restore context
+    lw          s10, 4(sp)                  // restore context
+    lw          s11, 0(sp)                  // restore context
+    addi sp, sp, 72
+    ret
+.size aes256_encrypt_sfs,.-aes256_encrypt_sfs
