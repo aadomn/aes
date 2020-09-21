@@ -1,6 +1,6 @@
 # Fast constant-time AES implementations on 32-bit architectures
 
-This repository contains efficient constant-time implementations for the Advanced Encryption Standard (AES) algorithm as supplementary material for the paper [Fixslicing AES-like Ciphers - New bitsliced AES speed records on ARM Cortex-M and RISC-V](https://eprint.iacr.org/2020) published at 
+This repository contains efficient constant-time implementations for the Advanced Encryption Standard (AES) algorithm as supplementary material for the paper [Fixslicing AES-like Ciphers - New bitsliced AES speed records on ARM Cortex-M and RISC-V](https://eprint.iacr.org/2020/1123.pdf) published in [TCHES](https://tches.iacr.org/index.php/TCHES/index) 2021, Volume 1.
 
 ## Structure of the repository
 
@@ -41,7 +41,7 @@ Each directory includes two different AES representations:
 
 ## Performance
 
-Since the fixsliced representations require 4 times less RAM to store all the round keys, they are more suited to the most resource-constrained platforms. Still, the barrel-shiftrows representation might be worthy of consideration for use-cases that deal with large amount of data on architectures with numerous general-purpose registers (e.g. RV32I). The table below summarizes the performance of each version on ARM Cortex-M3 and RV32I in cycles per byte. Note that those implementations are non-unrolled to ensure greater clarity and limit the impact on code size. Unrolling them would result in slightly better performance and we refer to [the paper](https://eprint.iacr.org/2020) for more details.
+Since the fixsliced representations require 4 times less RAM to store all the round keys, they are more suited to the most resource-constrained platforms. Still, the barrel-shiftrows representation might be worthy of consideration for use-cases that deal with large amount of data on architectures with numerous general-purpose registers (e.g. RV32I). The table below summarizes the performance of each version on ARM Cortex-M3 and RV32I in cycles per byte. Note that those implementations are non-unrolled to ensure greater clarity and limit the impact on code size. Unrolling them would result in slightly better performance and we refer to [the paper](https://eprint.iacr.org/2020/1123.pdf) for more details.
 
 | Algorithm                | Parallel blocks | ARM Cortex-M3 | RV32I (HiFive1 Rev B) |
 |:-------------------------|:---------------:|:-------------:|:---------------------:|
