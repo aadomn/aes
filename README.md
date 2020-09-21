@@ -54,7 +54,7 @@ Since the fixsliced representations require 4 times less RAM to store all the ro
 
 ## First-order masking
 
-A first-order masked implementation based on fixslicing can be found in `armcortexm/1storder_masking`. The masking scheme is the one described in the article [Masking the AES with Only Two Random Bits](https://eprint.iacr.org/2018/1007) and is strongly based on the code from the [corresponding repository](https://github.com/LaurenDM/TwoRandomBits). Note that the code in charge of the randomness generation is specific to the STM32F407VG development board and some changes would be necessary to run it on another board. The table below summarizes their performance on ARM Cortex-M4in cycles per byte. Once again, results can be slightly enhanced by unrolling the code.
+A first-order masked implementation based on fixslicing can be found in `armcortexm/1storder_masking`. The masking scheme is the one described in the article [Masking the AES with Only Two Random Bits](https://eprint.iacr.org/2018/1007) and is strongly based on the code from the [corresponding repository](https://github.com/LaurenDM/TwoRandomBits). Note that the code in charge of the randomness generation is specific to the STM32F407VG development board and some changes would be necessary to run it on another board. The table below summarizes their performance on ARM Cortex-M4 in cycles per byte. Once again, results can be slightly enhanced by unrolling the code.
 
 | Algorithm                                 | Parallel blocks | ARM Cortex-M4 |
 |:------------------------------------------|:---------------:|:-------------:|
