@@ -3,7 +3,7 @@
 * match fixslicing.
 * Note that those implementations rely on Look-Up Tables (LUT).
 *
-* See the paper available at https:// for more details.
+* See the paper at https://eprint.iacr.org/2020/1123.pdf for more details.
 *
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg

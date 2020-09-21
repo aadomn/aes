@@ -2,7 +2,7 @@
 * RV32I assembly implementations of the AES-128 and AES-256 key schedules
 *  according to the barrel-shiftrows representation.
 *
-* See the paper "Fixslicing AES-like Ciphers" at https:// for more details.
+* See the paper at https://eprint.iacr.org/2020/1123.pdf for more details.
 *
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg

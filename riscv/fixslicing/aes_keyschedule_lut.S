@@ -6,7 +6,7 @@
 * might not run in constant-time on some platforms. See the 'aes_keyschedule.S'
 * file for fully bitsliced implementation of the key schedule.
 *
-* For more details about the implementations see https:// 
+* See the paper at https://eprint.iacr.org/2020/1123.pdf for more details.
 *
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg

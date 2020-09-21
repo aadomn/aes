@@ -2,7 +2,7 @@
 * Fixsliced AES-128 and AES-256 implementations (encryption-only) in RV32I
 * assembly language, using the base instruction set only.
 *
-* For more details about the implementations see https:// 
+* See the paper at https://eprint.iacr.org/2020/1123.pdf for more details.
 *
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg

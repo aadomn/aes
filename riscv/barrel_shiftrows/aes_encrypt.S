@@ -2,8 +2,7 @@
 * Bitsliced AES-128 and AES-256 (encryption-only) implementations in RV32I
 * assembly, using the base instruction set only (no RISC-V extension needed).
 *
-* The implementation relies on the barrel-shiftrows representation introduced 
-* in the following article: https:// 
+* See the paper at https://eprint.iacr.org/2020/1123.pdf for more details.
 *
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg

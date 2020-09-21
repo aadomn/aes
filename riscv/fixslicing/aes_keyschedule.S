@@ -4,7 +4,7 @@
 * Note that those implementations are fully bitsliced and do not rely on any
 * Look-Up Table (LUT).
 *
-* See the paper "Fixslicing AES-like Ciphers" at https:// for more details.
+* See the paper at https://eprint.iacr.org/2020/1123.pdf for more details.
 *
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
