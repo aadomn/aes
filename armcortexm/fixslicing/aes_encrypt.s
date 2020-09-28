@@ -638,54 +638,6 @@ mixcolumns_3:
 ******************************************************************************/
 .align 2
 double_shiftrows:
-/*
-    str     r14, [sp, #52]          // store link register
-    movw    r14, #0x0f00
-    movt    r14, #0x0f00            // r14<- 0x0f000f00 (mask)
-    eor     r12, r14, r14, ror #4   // r12<- 0x0ff00ff0 (mask)
-    and     r5, r14, r11, ror #4    // r5 <- (S7 >>> 4) & 0x0f000f00
-    and     r4, r14, r11            // r4 <- S7 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r11, r11, r12, ror #4   // r11<- S7 & 0x00ff00ff
-    orr     r11, r5                 // r11<- r11 | r5
-    and     r5, r14, r2, ror #4     // r5 <- (S6 >>> 4) & 0x0f000f00
-    and     r4, r14, r2             // r4 <- S6 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r10, r2, r12, ror #4    // r10<- S6 & 0x00ff00ff
-    orr     r10, r5                 // r10<- r10 | r5
-    and     r5, r14, r0, ror #4     // r5 <- (S5 >>> 4) & 0x0f000f00
-    and     r4, r14, r0             // r4 <- S5 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r9, r0, r12, ror #4     // r9 <- S5 & 0x00ff00ff
-    orr     r9, r5                  // r9 <- r9 | r5
-    and     r5, r14, r8, ror #4     // r5 <- (S4 >>> 4) & 0x0f000f00
-    and     r4, r14, r8             // r4 <- S4 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r8, r8, r12, ror #4     // r8 <- S4 & 0x00ff00ff
-    orr     r8, r5                  // r8 <- r8 | r5
-    and     r5, r14, r7, ror #4     // r5 <- (S3 >>> 4) & 0x0f000f00
-    and     r4, r14, r7             // r4 <- S3 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r7, r7, r12, ror #4     // r7 <- S3 & 0x00ff00ff
-    orr     r7, r5                  // r7 <- r7 | r5
-    and     r5, r14, r6, ror #4     // r5 <- (S2 >>> 4) & 0x0f000f00
-    and     r4, r14, r6             // r4 <- S2 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r6, r6, r12, ror #4     // r6 <- S2 & 0x00ff00ff
-    orr     r6, r5                  // r6 <- r6 | r5
-    and     r5, r14, r3, ror #4     // r5 <- (S1 >>> 4) & 0x0f000f00
-    and     r4, r14, r3             // r4 <- S1 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r3, r3, r12, ror #4     // r3 <- S1 & 0x00ff00ff
-    orr     r5, r3                  // r5 <- r5 | r3
-    and     r3, r14, r1, ror #4     // r3 <- (S0 >>> 4) & 0x0f000f00
-    and     r4, r14, r1             // r4 <- S0 & 0x0f000f00
-    ldr     r14, [sp, #52]          // restore link register
-    orr     r4, r3, r4, ror #28     // r4 <- r3 | (r4 >>> 28)
-    and     r1, r1, r12, ror #4     // r1 <- S1 & 0x00ff00ff
-    orr     r4, r1                  // r4 <- r4 | r1
-    bx      lr
-*/
     movw    r10, #0x0f00
     movt    r10, #0x0f00            // r10<- 0x0f000f00 (mask)
     eor     r12, r10, r10, ror #4   // r12<- 0x0ff00ff0 (mask)
