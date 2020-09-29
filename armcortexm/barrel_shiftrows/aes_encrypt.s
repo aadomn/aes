@@ -14,7 +14,7 @@
 .thumb
 
 /******************************************************************************
-* AddRoundKey on the entire 1024-bit internal state.
+* AddRoundKey on a quarter state (i.e. 1024/4 = 256 bits).
 ******************************************************************************/
 .align 2
 add_round_key:
