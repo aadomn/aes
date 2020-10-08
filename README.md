@@ -41,9 +41,9 @@ Each directory includes two different AES representations:
 
 ## Performance
 
-Since the fixsliced representations require 4 times less RAM to store all the round keys, they are more suited to the most resource-constrained platforms. Still, the barrel-shiftrows representation might be worthy of consideration for use-cases that deal with large amount of data on architectures with numerous general-purpose registers (e.g. RV32I). The table below summarizes the performance of each version on ARM Cortex-M3 and RV32I in cycles per byte. Note that those implementations are non-unrolled to ensure greater clarity and limit the impact on code size. Unrolling them would result in slightly better performance and we refer to [the paper](https://eprint.iacr.org/2020/1123.pdf) for more details.
+Since the fixsliced representations require 4 times less RAM to store all the round keys, they are more suited to the most resource-constrained platforms. Still, the barrel-shiftrows representation might be worthy of consideration for use-cases that deal with large amount of data on architectures with numerous general-purpose registers (e.g. RV32I). The table below summarizes the performance of each version on ARM Cortex-M3 and E31 RISC-V processors in cycles per byte. Note that those implementations are non-unrolled to ensure greater clarity and limit the impact on code size. Unrolling them would result in slightly better performance and we refer to [the paper](https://eprint.iacr.org/2020/1123.pdf) for more details.
 
-| Algorithm                | Parallel blocks | ARM Cortex-M3 | RV32I (HiFive1 Rev B) |
+| Algorithm                | Parallel blocks | ARM Cortex-M3 | E31 RISC-V core       |
 |:-------------------------|:---------------:|:-------------:|:---------------------:|
 | AES-128 semi-fixsliced   | 2               | 91.3          | 108.3                 |
 | AES-128 fully-fixsliced  | 2               | 87.3          | 101.6                 |
