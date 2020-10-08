@@ -35,7 +35,7 @@ void aes256_keyschedule_sfs(uint32_t rkeys[120], const unsigned char key0[32],
 void aes128_keyschedule_ffs_lut(uint32_t rkeys[88],const unsigned char key[16]);
 void aes256_keyschedule_ffs_lut(uint32_t rkeys[120], const unsigned char key[32]);
 
-/* Fully-fixsliced key schedule functions (LUT-based) */
+/* Semi-fixsliced key schedule functions (LUT-based) */
 void aes128_keyschedule_sfs_lut(uint32_t rkeys[88], const unsigned char key[16]);
 void aes256_keyschedule_sfs_lut(uint32_t rkeys[120], const unsigned char key[32]);
 
