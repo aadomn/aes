@@ -812,7 +812,7 @@ aes256_encrypt_ffs:
     bx      lr
 
 /******************************************************************************
-* Semi-fixsliced and loop-based implementation of AES-128.
+* Semi-fixsliced implementation of AES-128.
 *
 * Two blocks are encrypted in parallel.
 *
@@ -876,7 +876,7 @@ aes128_encrypt_sfs:
     bx      lr
 
 /******************************************************************************
-* Semi-fixsliced and loop-based implementation of AES-256.
+* Semi-fixsliced implementation of AES-256.
 *
 * Two blocks are encrypted in parallel.
 *
