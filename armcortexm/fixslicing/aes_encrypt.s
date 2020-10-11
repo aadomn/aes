@@ -9,11 +9,22 @@
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     August 2020
+* @date     October 2020
 ******************************************************************************/
 
 .syntax unified
 .thumb
+
+/******************************************************************************
+* Macro to compute the SWAPMOVE technique: swap the bits in 'in1' masked by 'm'
+* by the bits in 'in0' masked by 'm << n' and put the results in 'out0', 'out1'
+******************************************************************************/
+.macro swpmv out0, out1, in0, in1, m, n, tmp
+    eor     \tmp, \in1, \in0, lsr \n
+    and     \tmp, \m
+    eor     \out1, \in1, \tmp
+    eor     \out0, \in0, \tmp, lsl \n
+.endm
 
 /******************************************************************************
 * Packs two 128-bit input blocs stored in r4-r7 and r8-r11, respectively, into
@@ -33,54 +44,18 @@ packing:
     movt    r3, #0x0f0f             // r3 <- 0x0f0f0f0f (mask for SWAPMOVE)
     eor     r2, r3, r3, lsl #2      // r2 <- 0x33333333 (mask for SWAPMOVE)
     eor     r1, r2, r2, lsl #1      // r1 <- 0x55555555 (mask for SWAPMOVE)
-    eor     r12, r4, r8, lsr #1     // SWAPMOVE(r8, r4, 0x55555555, 1) ....
-    and     r12, r1
-    eor     r4, r12
-    eor     r8, r8, r12, lsl #1     // .... SWAPMOVE(r8, r4, 0x55555555, 1)
-    eor     r12, r5, r9, lsr #1     // SWAPMOVE(r9, r5, 0x55555555, 1) ....
-    and     r12, r1
-    eor     r5, r12
-    eor     r9, r9, r12, lsl #1     // .... SWAPMOVE(r9, r5, 0x55555555, 1)
-    eor     r12, r6, r10, lsr #1    // SWAPMOVE(r10, r6, 0x55555555, 1) ....
-    and     r12, r1
-    eor     r6, r12
-    eor     r10, r10, r12, lsl #1   // .... SWAPMOVE(r10, r6, 0x55555555, 1)
-    eor     r12, r7, r11, lsr #1    // SWAPMOVE(r11, r7, 0x55555555, 1) ....
-    and     r12, r1
-    eor     r7, r12
-    eor     r11, r11, r12, lsl #1   // .... SWAPMOVE(r11, r7, 0x55555555, 1)
-    eor     r12, r4, r5, lsr #2     // SWAPMOVE(r5, r4, 0x33333333, 2) ....
-    and     r12, r2
-    eor     r4, r12
-    eor     r0, r5, r12, lsl #2     // .... SWAPMOVE(r5, r4, 0x33333333, 2)
-    eor     r12, r8, r9, lsr #2     // SWAPMOVE(r9, r8, 0x33333333, 2) ....
-    and     r12, r2
-    eor     r5, r8, r12
-    eor     r9, r9, r12, lsl #2     // .... SWAPMOVE(r9, r8, 0x33333333, 2)
-    eor     r12, r6, r7, lsr #2     // SWAPMOVE(r7, r6, 0x33333333, 2) ....
-    and     r12, r2
-    eor     r8, r6, r12
-    eor     r7, r7, r12, lsl #2     // .... SWAPMOVE(r7, r6, 0x33333333, 2)
-    eor     r12, r10, r11, lsr #2   // SWAPMOVE(r11, r10, 0x33333333, 2) ....
-    and     r12, r2
-    eor     r2, r10, r12
-    eor     r11, r11, r12, lsl #2   // .... SWAPMOVE(r11, r10, 0x33333333, 2)
-    eor     r12, r4, r8, lsr #4     // SWAPMOVE(r8, r4, 0x0f0f0f0f, 4) ....
-    and     r12, r3
-    eor     r4, r12
-    eor     r8, r8, r12, lsl #4     // .... SWAPMOVE(r8, r4, 0x0f0f0f0f,4)
-    eor     r12, r0, r7, lsr #4     // SWAPMOVE(r7, r1, 0x0f0f0f0f, 4) ....
-    and     r12, r3
-    eor     r6, r0, r12
-    eor     r10, r7, r12, lsl #4    // .... SWAPMOVE(r7, r1, 0x0f0f0f0f, 4)
-    eor     r12, r9, r11, lsr #4    // SWAPMOVE(r11, r9, 0x0f0f0f0f, 4) ....
-    and     r12, r3
-    eor     r7, r9, r12
-    eor     r11, r11, r12, lsl #4   // .... SWAPMOVE(r11,r9, 0x0f0f0f0f, 4)
-    eor     r12, r5, r2, lsr #4     // SWAPMOVE(r2, r5, 0x0f0f0f0f, 4) ....
-    and     r12, r3
-    eor     r5, r12
-    eor     r9, r2, r12, lsl #4     // .... SWAPMOVE(r2, r5, 0x0f0f0f0f, 4)
+    swpmv   r8, r4, r8, r4, r1, #1, r12
+    swpmv   r9, r5, r9, r5, r1, #1, r12
+    swpmv   r10, r6, r10, r6, r1, #1, r12
+    swpmv   r11, r7, r11, r7, r1, #1, r12
+    swpmv   r0, r4, r5, r4, r2, #2, r12
+    swpmv   r9, r5, r9, r8, r2, #2, r12
+    swpmv   r7, r8, r7, r6, r2, #2, r12
+    swpmv   r11, r2, r11, r10, r2, #2, r12
+    swpmv   r8, r4, r8, r4, r3, #4, r12
+    swpmv   r10, r6, r7, r0, r3, #4, r12
+    swpmv   r11, r7, r11, r9, r3, #4, r12
+    swpmv   r9, r5, r2, r5, r3, #4, r12
     bx      lr
 
 /******************************************************************************
@@ -89,57 +64,21 @@ packing:
 .align 2
 unpacking:
     movw    r3, #0x0f0f
-    movt    r3, #0x0f0f             // r3 <- 0x0f0f0f0f (mask for SWAPMOVE)
-    eor     r12, r5, r9, lsr #4     // SWAPMOVE(r9, r5, 0x0f0f0f0f, 4) ....
-    and     r12, r3
-    eor     r5, r12
-    eor     r2, r9, r12, lsl #4     // .... SWAPMOVE(r9, r5, 0x0f0f0f0f, 4)
-    eor     r12, r7, r11, lsr #4    // SWAPMOVE(r11, r7, 0x0f0f0f0f, 4) ....
-    and     r12, r3
-    eor     r9, r7, r12
-    eor     r11, r11, r12, lsl #4     // .... SWAPMOVE(r11, r7, 0x0f0f0f0f, 4)
-    eor     r12, r6, r10, lsr #4     // SWAPMOVE(r10, r6, 0x0f0f0f0f, 4) ....
-    and     r12, r3
-    eor     r1, r6, r12
-    eor     r7, r10, r12, lsl #4     // .... SWAPMOVE(r10, r6, 0x0f0f0f0f, 4)
-    eor     r12, r4, r8, lsr #4     // SWAPMOVE(r8, r4, 0x0f0f0f0f, 4) ....
-    and     r12, r3
-    eor     r4, r12
-    eor     r8, r8, r12, lsl #4     // .... SWAPMOVE(r8, r4, 0x0f0f0f0f,4)
-    eor     r3, r3, r3, lsl #2      // r3 <- 0x33333333 (mask for SWAPMOVE)
-    eor     r12, r2, r11, lsr #2     // SWAPMOVE(r11, r2, 0x33333333, 2) ....
-    and     r12, r3
-    eor     r10, r2, r12
-    eor     r11, r11, r12, lsl #2     // .... SWAPMOVE(r11, r2, 0x33333333, 2)
-    eor     r12, r8, r7, lsr #2     // SWAPMOVE(r7, r8, 0x33333333, 2) ....
-    and     r12, r3
-    eor     r6, r8, r12
-    eor     r7, r7, r12, lsl #2     // .... SWAPMOVE(r7, r8, 0x33333333, 2)
-    eor     r12, r5, r9, lsr #2     // SWAPMOVE(r9, r5, 0x33333333, 2) ....
-    and     r12, r3
-    eor     r8, r5, r12
-    eor     r9, r9, r12, lsl #2     // .... SWAPMOVE(r9, r5, 0x33333333, 2)
-    eor     r12, r4, r1, lsr #2     // SWAPMOVE(r1, r4, 0x33333333, 2) ....
-    and     r12, r3
-    eor     r4, r12
-    eor     r5, r1, r12, lsl #2     // .... SWAPMOVE(r1, r4, 0x33333333, 2)
-    eor     r1, r3, r3, lsl #1      // r1 <- 0x33333333 (mask for SWAPMOVE)
-    eor     r12, r4, r8, lsr #1     // SWAPMOVE(r8, r4, 0x55555555, 1) ....
-    and     r12, r1
-    eor     r4, r12
-    eor     r8, r8, r12, lsl #1     // .... SWAPMOVE(r8, r4, 0x55555555, 1)
-    eor     r12, r5, r9, lsr #1     // SWAPMOVE(r9, r5, 0x55555555, 1) ....
-    and     r12, r1
-    eor     r5, r12
-    eor     r9, r9, r12, lsl #1     // .... SWAPMOVE(r9, r5, 0x55555555, 1)
-    eor     r12, r6, r10, lsr #1     // SWAPMOVE(r10, r6, 0x55555555, 1) ....
-    and     r12, r1
-    eor     r6, r12
-    eor     r10, r10, r12, lsl #1     // .... SWAPMOVE(r10, r6, 0x55555555, 1)
-    eor     r12, r7, r11, lsr #1     // SWAPMOVE(r11, r7, 0x55555555, 1) ....
-    and     r12, r1
-    eor     r7, r12
-    eor     r11, r11, r12, lsl #1     // .... SWAPMOVE(r11, r7, 0x55555555, 1)
+    movt    r3, #0x0f0f                 // r3 <- 0x0f0f0f0f (mask for SWAPMOVE)
+    swpmv   r2, r5, r9, r5, r3, #4, r12
+    swpmv   r11, r9, r11, r7, r3, #4, r12
+    swpmv   r7, r1, r10, r6, r3, #4, r12
+    swpmv   r8, r4, r8, r4, r3, #4, r12
+    eor     r3, r3, r3, lsl #2          // r3 <- 0x33333333 (mask for SWAPMOVE)
+    swpmv   r11, r10,r11, r2, r3, #2, r12
+    swpmv   r7, r6, r7, r8, r3, #2, r12
+    swpmv   r9, r8, r9, r5, r3, #2, r12
+    swpmv   r5, r4, r1, r4, r3, #2, r12
+    eor     r1, r3, r3, lsl #1          // r1 <- 0x55555555 (mask for SWAPMOVE)
+    swpmv   r8, r4, r8, r4, r1, #1, r12
+    swpmv   r9, r5,r9, r5, r1, #1, r12
+    swpmv   r10, r6, r10, r6, r1, #1, r12
+    swpmv   r11, r7, r11, r7, r1, #1, r12
     bx      lr
 
 /******************************************************************************
@@ -640,47 +579,14 @@ mixcolumns_3:
 double_shiftrows:
     movw    r10, #0x0f00
     movt    r10, #0x0f00            // r10<- 0x0f000f00 (mask)
-    eor     r12, r10, r10, ror #4   // r12<- 0x0ff00ff0 (mask)
-    and     r5, r10, r11, ror #4    // r5 <- (S7 >>> 4) & 0x0f000f00
-    and     r4, r10, r11            // r4 <- S7 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r11, r11, r12, ror #4   // r11<- S7 & 0x00ff00ff
-    orr     r11, r5                 // r11<- r11 | r5
-    and     r5, r10, r2, ror #4     // r5 <- (S6 >>> 4) & 0x0f000f00
-    and     r4, r10, r2             // r4 <- S6 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r2, r2, r12, ror #4     // r2 <- S6 & 0x00ff00ff
-    orr     r2, r5                  // r2 <- r2 | r5
-    and     r5, r10, r0, ror #4     // r5 <- (S5 >>> 4) & 0x0f000f00
-    and     r4, r10, r0             // r4 <- S5 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r0, r0, r12, ror #4     // r0 <- S5 & 0x00ff00ff
-    orr     r0, r5                  // r0 <- r0 | r5
-    and     r5, r10, r8, ror #4     // r5 <- (S4 >>> 4) & 0x0f000f00
-    and     r4, r10, r8             // r4 <- S4 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r8, r8, r12, ror #4     // r8 <- S4 & 0x00ff00ff
-    orr     r8, r5                  // r8 <- r8 | r5
-    and     r5, r10, r7, ror #4     // r5 <- (S3 >>> 4) & 0x0f000f00
-    and     r4, r10, r7             // r4 <- S3 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r7, r7, r12, ror #4     // r7 <- S3 & 0x00ff00ff
-    orr     r7, r5                  // r7 <- r7 | r5
-    and     r5, r10, r6, ror #4     // r5 <- (S2 >>> 4) & 0x0f000f00
-    and     r4, r10, r6             // r4 <- S2 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r6, r6, r12, ror #4     // r6 <- S2 & 0x00ff00ff
-    orr     r6, r5                  // r6 <- r6 | r5
-    and     r5, r10, r3, ror #4     // r5 <- (S1 >>> 4) & 0x0f000f00
-    and     r4, r10, r3             // r4 <- S1 & 0x0f000f00
-    orr     r5, r5, r4, ror #28     // r5 <- r5 | (r4 >>> 28)
-    and     r3, r3, r12, ror #4     // r3 <- S1 & 0x00ff00ff
-    orr     r3, r5                  // r3 <- r3 | r5
-    and     r5, r10, r1, ror #4     // r3 <- (S0 >>> 4) & 0x0f000f00
-    and     r4, r10, r1             // r4 <- S0 & 0x0f000f00
-    orr     r4, r5, r4, ror #28     // r4 <- r3 | (r4 >>> 28)
-    and     r1, r1, r12, ror #4     // r1 <- S1 & 0x00ff00ff
-    orr     r1, r4                  // r1 <- r1 | r4
+    swpmv   r0, r0, r0, r0, r10, #4, r12
+    swpmv   r1, r1, r1, r1, r10, #4, r12
+    swpmv   r2, r2, r2, r2, r10, #4, r12
+    swpmv   r3, r3, r3, r3, r10, #4, r12
+    swpmv   r6, r6, r6, r6, r10, #4, r12
+    swpmv   r7, r7, r7, r7, r10, #4, r12
+    swpmv   r8, r8, r8, r8, r10, #4, r12
+    swpmv   r11, r11, r11, r11, r10, #4, r12
     bx      lr
 
 /******************************************************************************
