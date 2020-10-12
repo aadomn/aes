@@ -237,138 +237,63 @@ sbox:
 * size could be saved by merging the two files.
 ******************************************************************************/
 double_shiftrows:
-	li 		a1, 0x00ff00ff
-	li 		a2, 0x0f000f00
-	slli 	a6, a2, 4
-	and 	s8, t0, a1 					// s8 <- state[0] & 0x00ff00ff
-	rori 	s9, t0, 4, s10, s11 	    // s9 <- state[0] >>> 4
-	and 	s9, s9, a2 					// s9 <- s9 & 0x0f00f00
-	or 		s8, s8, s9 					// s8 <- s8 | s9
-	rori 	s9, t0, 28, s10, s11        // s9 <- state[0] >>> 28
-	and 	s9, s9, a6 					// s9 <- s9 & 0xf000f000
-	or 		t0, s8, s9 					// t0 <- s8 | s9
-	and 	s8, t1, a1 					// s8 <- state[1] & 0x00ff00ff
-	rori 	s9, t1, 4, s10, s11 		// s9 <- state[1] >>> 4
-	and 	s9, s9, a2 					// s9 <- s9 & 0x0f00f00
-	or 		s8, s8, s9 					// s8 <- s8 | s9
-	rori 	s9, t1, 28, s10, s11 		// s9 <- state[1] >>> 28
-	and 	s9, s9, a6 					// s9 <- s9 & 0xf000f000
-	or 		t1, s8, s9 					// s1 <- s8 | s9
-	and 	s8, t2, a1 					// s8 <- state[2] & 0x00ff00ff
-	rori 	s9, t2, 4, s10, s11 		// s9 <- state[2] >>> 4
-	and 	s9, s9, a2 					// s9 <- s9 & 0x0f00f00
-	or 		s8, s8, s9 					// s8 <- s8 | s9
-	rori 	s9, t2, 28, s10, s11 		// s9 <- state[2] >>> 28
-	and 	s9, s9, a6 					// s9 <- s9 & 0xf000f000
-	or 		t2, s8, s9 					// s2 <- s8 | s9
-	and 	s8, t3, a1 					// s8 <- state[3] & 0x00ff00ff
-	rori 	s9, t3, 4, s10, s11 		// s9 <- state[3] >>> 4
-	and 	s9, s9, a2 					// s9 <- s9 & 0x0f00f00
-	or 		s8, s8, s9 					// s8 <- s8 | s9
-	rori 	s9, t3, 28, s10, s11 		// s9 <- state[3] >>> 28
-	and 	s9, s9, a6 					// s9 <- s9 & 0xf000f000
-	or 		t3, s8, s9 					// s3 <- s8 | s9
-	and 	s8, t4, a1 					// s8 <- state[4] & 0x00ff00ff
-	rori 	s9, t4, 4, s10, s11 		// s9 <- state[4] >>> 4
-	and 	s9, s9, a2 					// s9 <- s9 & 0x0f00f00
-	or 		s8, s8, s9 					// s8 <- s8 | s9
-	rori 	s9, t4, 28, s10, s11 		// s9 <- state[4] >>> 28
-	and 	s9, s9, a6 					// s9 <- s9 & 0xf000f000
-	or 		t4, s8, s9 					// s4 <- s8 | s9
-	and 	s8, t5, a1 					// s8 <- state[5] & 0x00ff00ff
-	rori 	s9, t5, 4, s10, s11         // s9 <- state[5] >>> 4
-	and 	s9, s9, a2 					// s9 <- s9 & 0x0f00f00
-	or 		s8, s8, s9 					// s8 <- s8 | s9
-	rori 	s9, t5, 28, s10, s11 		// s9 <- state[5] >>> 28
-	and 	s9, s9, a6 					// s9 <- s9 & 0xf000f000
-	or 		t5, s8, s9 					// s5 <- s8 | s9
-	and 	s8, t6, a1 					// s8 <- state[6] & 0x00ff00ff
-	rori 	s9, t6, 4, s10, s11 		// s9 <- state[6] >>> 4
-	and 	s9, s9, a2 					// s9 <- s9 & 0x0f00f00
-	or 		s8, s8, s9 					// s8 <- s8 | s9
-	rori 	s9, t6, 28, s10, s11 		// s9 <- state[6] >>> 28
-	and 	s9, s9, a6 					// s9 <- s9 & 0xf000f000
-	or 		t6, s8, s9 					// s6 <- s8 | s9
-	and 	s8, a7, a1 					// s8 <- state[7] & 0x00ff00ff
-	rori 	s9, a7, 4, s10, s11 		// s9 <- state[7] >>> 4
-	and 	s9, s9, a2 					// s9 <- s9 & 0x0f00f00
-	or 		s8, s8, s9 					// s8 <- s8 | s9
-	rori 	s9, a7, 28, s10, s11 		// s9 <- state[7] >>> 28
-	and 	s9, s9, a6 					// s9 <- s9 & 0xf000f000
-	or 		a7, s8, s9 					// s7 <- s8 | s9
+    li         a1, 0x0f000f00
+    swapmove   t0,t0,t0,t0, a1, 4, a2
+    swapmove   t1,t1,t1,t1, a1, 4, a2
+    swapmove   t2,t2,t2,t2, a1, 4, a2
+    swapmove   t3,t3,t3,t3, a1, 4, a2
+    swapmove   t4,t4,t4,t4, a1, 4, a2
+    swapmove   t5,t5,t5,t5, a1, 4, a2
+    swapmove   t6,t6,t6,t6, a1, 4, a2
+    swapmove   a7,a7,a7,a7, a1, 4, a2
     ret
-
-/******************************************************************************
-* Compute ShiftRows^(-x) for x = 1/3 on a register r
-*
-* Parameters:
-*   - r       	input/output register
-* 	- tmp0-1  	temporary registers
-* Prerequisites:
-*	- a1  		to contain 0x00003f00/0x00000300
-*	- a2  		to contain 0x00000300/0x00003f00
-*	- a3  		to contain 0x000f0000/0x000f0000
-*	- a4  		to contain 0x03000000/0x3f000000
-*	- a5  		to contain 0x3f000000/0x03000000
-******************************************************************************/
-.macro inv_shiftrows r, tmp0, tmp1, x
-	srli 	\tmp0, \r, \x
-	and 	\tmp0, \tmp0, a1
-	and 	\tmp1, \r, a2
-	slli 	\tmp1, \tmp1, 8-\x
-	or 		\tmp0, \tmp0, \tmp1
-	srli 	\tmp1, \r, 4
-	and 	\tmp1, \tmp1, a3
-	or 		\tmp0, \tmp0, \tmp1
-	and 	\tmp1, \r, a3
-	slli 	\tmp1, \tmp1, 4
-	or 		\tmp0, \tmp0, \tmp1
-	srli 	\tmp1, \r, 8-\x
-	and 	\tmp1, \tmp1, a4
-	or 		\tmp0, \tmp0, \tmp1
-	and 	\tmp1, \r, a5
-	slli 	\tmp1, \tmp1, \x
-	or 		\tmp0, \tmp0, \tmp1
-	andi 	\r, \r, 0xff
-	or 		\r, \r, \tmp0
-.endm
-
+    
 /******************************************************************************
 * Compute ShiftRows^(-1) on the entire round key in order to match fixslicing.
 ******************************************************************************/
 inv_shiftrows_1:
-    li     			a1, 0x00003f00 			// a1 <- 0x00003f00
-    li     			a2, 0x00000300 			// a2 <- 0x00000300
-    li     			a3, 0x000f0000 			// a3 <- 0x000f0000
-    slli 			a4, a2, 16 				// a4 <- 0x03000000
-    slli 			a5, a1, 16 				// a5 <- 0x3f000000
-    inv_shiftrows 	a7, s8, s9, 2
-    inv_shiftrows 	t6, s8, s9, 2
-    inv_shiftrows 	t5, s8, s9, 2
-    inv_shiftrows 	t4, s8, s9, 2
-    inv_shiftrows 	t3, s8, s9, 2
-    inv_shiftrows 	t2, s8, s9, 2
-    inv_shiftrows 	t1, s8, s9, 2
-    inv_shiftrows 	t0, s8, s9, 2
+    li          a1, 0x0c0f0300          // a1 <- 0x0c0f0300
+    li          a2, 0x33003300          // a2 <- 0x33003300
+    swapmove    a7,a7,a7,a7, a1, 4, a3
+    swapmove    a7,a7,a7,a7, a2, 2, a3
+    swapmove    t6,t6,t6,t6, a1, 4, a3
+    swapmove    t6,t6,t6,t6, a2, 2, a3
+    swapmove    t5,t5,t5,t5, a1, 4, a3
+    swapmove    t5,t5,t5,t5, a2, 2, a3
+    swapmove    t4,t4,t4,t4, a1, 4, a3
+    swapmove    t4,t4,t4,t4, a2, 2, a3
+    swapmove    t3,t3,t3,t3, a1, 4, a3
+    swapmove    t3,t3,t3,t3, a2, 2, a3
+    swapmove    t2,t2,t2,t2, a1, 4, a3
+    swapmove    t2,t2,t2,t2, a2, 2, a3
+    swapmove    t1,t1,t1,t1, a1, 4, a3
+    swapmove    t1,t1,t1,t1, a2, 2, a3
+    swapmove    t0,t0,t0,t0, a1, 4, a3
+    swapmove    t0,t0,t0,t0, a2, 2, a3
     ret
 
 /******************************************************************************
 * Compute ShiftRows^(-3) on the entire round key in order to match fixslicing.
 ******************************************************************************/
 inv_shiftrows_3:
-    li     			a1, 0x00000300 			// a1 <- 0x00000300
-    li     			a2, 0x00003f00 			// a2 <- 0x00003f00
-    li     			a3, 0x000f0000 			// a3 <- 0x000f0000
-    slli 			a4, a2, 16 				// a4 <- 0x3f000000
-    slli 			a5, a1, 16 				// a5 <- 0x03000000
-    inv_shiftrows 	a7, s8, s9, 6
-    inv_shiftrows 	t6, s8, s9, 6
-    inv_shiftrows 	t5, s8, s9, 6
-    inv_shiftrows 	t4, s8, s9, 6
-    inv_shiftrows 	t3, s8, s9, 6
-    inv_shiftrows 	t2, s8, s9, 6
-    inv_shiftrows 	t1, s8, s9, 6
-    inv_shiftrows 	t0, s8, s9, 6
+    li          a1, 0x030f0c00          // a1 <- 0x0c0f0300
+    li          a2, 0x33003300          // a2 <- 0x33003300
+    swapmove    a7,a7,a7,a7, a1, 4, a3
+    swapmove    a7,a7,a7,a7, a2, 2, a3
+    swapmove    t6,t6,t6,t6, a1, 4, a3
+    swapmove    t6,t6,t6,t6, a2, 2, a3
+    swapmove    t5,t5,t5,t5, a1, 4, a3
+    swapmove    t5,t5,t5,t5, a2, 2, a3
+    swapmove    t4,t4,t4,t4, a1, 4, a3
+    swapmove    t4,t4,t4,t4, a2, 2, a3
+    swapmove    t3,t3,t3,t3, a1, 4, a3
+    swapmove    t3,t3,t3,t3, a2, 2, a3
+    swapmove    t2,t2,t2,t2, a1, 4, a3
+    swapmove    t2,t2,t2,t2, a2, 2, a3
+    swapmove    t1,t1,t1,t1, a1, 4, a3
+    swapmove    t1,t1,t1,t1, a2, 2, a3
+    swapmove    t0,t0,t0,t0, a1, 4, a3
+    swapmove    t0,t0,t0,t0, a2, 2, a3
     ret
 
 /******************************************************************************
