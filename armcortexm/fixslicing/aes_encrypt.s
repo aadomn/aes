@@ -27,6 +27,91 @@
 .endm
 
 /******************************************************************************
+* Rotate all bytes in 'in' by 'n0' bits to the rights and put the results in
+* 'out'. 'm' refers to the appropriate bitmask and 'n1' = 8-'n0'.
+******************************************************************************/
+.macro byteror  out, in, m, n0, n1, tmp
+    and     \out, \m, \in, lsr \n0
+    bic     \tmp, \in, \m, ror \n1
+    orr     \out, \out, \tmp, lsl \n1
+.endm
+
+/******************************************************************************
+* Compute the MixColumns for rounds i st i%4 == 0 or 2.
+* Between the two versions, only the masks and the shifts for the 'byteror' are
+* differing.
+******************************************************************************/
+.macro mc_0_2   m, n0, n1, n2, n3
+    byteror r5, r1, \m, \n0, \n1, r9    // r5 <- BYTE_ROR_n0(S0)
+    eor     r4, r1, r5, ror #8          // r4 <- S0 ^ (BYTE_ROR_6(S0) >>> 8)
+    byteror r5, r11, \m, \n0, \n1, r9   // r5 <- BYTE_ROR_n0(S7)
+    eor     r10, r11, r5, ror #8        // r10<- S7 ^ BYTE_ROR_6(S7 >>> 8)
+    bic     r9, r11, \m                 // r9 <- S7 & ~m
+    eor     r5, r4, r9, ror \n2         // r5 <- r4 ^ (r9 >>> 26)
+    and     r9, r11, \m                 // r9 <- S7 & m
+    eor     r11, r5, r9, ror \n3        // r11<- r4 ^ BYTE_ROR_n1(S7 >>> 24)
+    byteror r5, r10, \m, \n0, \n1, r9   // r5 <- BYTE_ROR_n0(r10)
+    eor     r11, r11, r5, ror #8        // r11 <- S'7
+    eor     r10, r10, r4                // S0^S7 ^ BYTE_ROR_n0(S0^S7 >>> 8)
+    byteror r5, r2, \m, \n0, \n1, r9    // r5 <- BYTE_ROR_n0(S6)
+    eor     r9, r2, r5, ror #8          // r9 <- S6 ^ BYTE_ROR_6(S6 >>> 8)
+    bic     r5, r2, \m                  // r5 <- S6 & ~m
+    eor     r10, r10, r5, ror \n2       // r10<- r10 ^ (r5 >>> 26)
+    and     r2, r2, \m                  // r2 <- S6 & m
+    eor     r10, r10, r2, ror \n3       // r10<- r4 ^ S7 ^ BYTE_ROR_n0(S7 >>> 8) ^ BYTE_ROR_n1(S6 >>> 24)
+    byteror r2, r9, \m, \n0, \n1, r5    // r2 <- BYTE_ROR_n0(r9)
+    eor     r10, r10, r2, ror #8        // r10<- S'6
+    byteror r5, r0, \m, \n0, \n1, r2    // r5 <- BYTE_ROR_n0(S5)
+    eor     r2, r0, r5, ror #8          // r2 <- S5 ^ BYTE_ROR_6(S5 >>> 8)
+    bic     r5, r0, \m                  // r5 <- S5 & ~m
+    eor     r9, r9, r5, ror \n2         // r9 <- r9 ^ (r5 >>> 26)
+    and     r0, r0, \m                  // r0 <- S5 & m
+    eor     r9, r9, r0, ror \n3         // r9 <- S6 ^ BYTE_ROR_n0(S6 >>> 8) ^ BYTE_ROR_n1(S5 >>> 24)
+    byteror r0, r2, \m, \n0, \n1, r5    // r0 <- BYTE_ROR_n0(r2)
+    eor     r9, r9, r0, ror #8          // r9 <- S'5
+    eor     r2, r2, r4                  // r2 <- S0^S5 ^ BYTE_ROR_n0(S0^S5 >>> 8)
+    byteror r5, r8, \m, \n0, \n1, r0    // r5 <- BYTE_ROR_n0(S4)
+    eor     r0, r8, r5, ror #8          // r0 <- S4 ^ BYTE_ROR_6(S4 >>> 8)
+    bic     r5, r8, \m                  // r5 <- S4 & ~m
+    eor     r2, r2, r5, ror \n2         // r2 <- r2 ^ (r5 >>> 26)
+    and     r8, r8, \m                  // r8 <- S4 & m
+    eor     r8, r2, r8, ror \n3         // r8 <- S0^S5 ^ BYTE_ROR_n0(S0^S4^S5 >>> 8)^ BYTE_ROR_n1(S4 >>> 24)
+    byteror r2, r0, \m, \n0, \n1, r5    // r2 <- BYTE_ROR_n0(r0)
+    eor     r8, r8, r2, ror #8          // r8 <- S'4
+    eor     r0, r0, r4                  // r0 <- S0^S4 ^ BYTE_ROR_n0(S0^S4 >>> 8)
+    byteror r5, r7, \m, \n0, \n1, r2    // r5 <- BYTE_ROR_n0(S3)
+    eor     r2, r7, r5, ror #8          // r2 <- S3 ^ BYTE_ROR_6(S3 >>> 8)
+    bic     r5, r7, \m                  // r5 <- S3 & ~m
+    eor     r0, r0, r5, ror \n2         // r0 <- r0 ^ (r5 >>> 26)
+    and     r7, r7, \m                  // r7 <- S3 & m
+    eor     r7, r0, r7, ror \n3         // r7 <- S0^S4 ^ BYTE_ROR_n0(S0^S4^S3 >>> 8)^ BYTE_ROR_n1(S3 >>> 24)
+    byteror r0, r2, \m, \n0, \n1, r5    // r0 <- BYTE_ROR_n0(r2)
+    eor     r7, r7, r0, ror #8          // r7 <- S'3
+    byteror r5, r6, \m, \n0, \n1, r0    // r5 <- BYTE_ROR_n0(S2)
+    eor     r0, r6, r5, ror #8          // r0 <- S2 ^ BYTE_ROR_6(S2 >>> 8)
+    bic     r5, r6, \m                  // r5 <- S2 & ~m
+    eor     r2, r2, r5, ror \n2         // r2 <- r2 ^ (r5 >>> 26)
+    and     r6, r6, \m                  // r6 <- S2 & m
+    eor     r6, r2, r6, ror \n3         // r6 <- S3 ^ BYTE_ROR_n0(S3^S2 >>> 8)^ BYTE_ROR_n1(S2 >>> 24)
+    byteror r2, r0, \m, \n0, \n1, r5    // r2 <- BYTE_ROR_n0(r0)
+    eor     r6, r6, r2, ror #8          // r6 <- S'2
+    byteror r5, r3, \m, \n0, \n1, r2    // r5 <- BYTE_ROR_n0(S2)
+    eor     r2, r3, r5, ror #8          // r2 <- S1 ^ BYTE_ROR_6(S1 >>> 8)
+    bic     r5, r3, \m                  // r5 <- S1 & ~m
+    eor     r0, r0, r5, ror \n2         // r0 <- r0 ^ (r5 >>> 26)
+    and     r3, r3, \m                  // r3 <- S1 & m
+    eor     r3, r0, r3, ror \n3         // r3 <- S2 ^ BYTE_ROR_n0(S2^S1 >>> 8)^ BYTE_ROR_n1(S1 >>> 24)
+    byteror r0, r2, \m, \n0, \n1, r5    // r0 <- BYTE_ROR_n0(r2)
+    eor     r5, r3, r0, ror #8          // r5 <- S'1
+    bic     r3, r1, \m                  // r3 <- S0 & ~m
+    eor     r2, r2, r3, ror \n2         // r2 <- r2 ^ (r3 >>> 26)
+    and     r1, r1, \m                  // r1 <- S0 & m
+    eor     r1, r2, r1, ror \n3         // r1 <- S1 ^ BYTE_ROR_n0(S1 >>> 8)^ BYTE_ROR_n1(S0 >>> 24)
+    byteror r3, r4, \m, \n0, \n1, r2    // r3 <- BYTE_ROR_n0(r4)
+    eor     r4, r1, r3, ror #8          // r4 <- S'0
+.endm
+
+/******************************************************************************
 * Packs two 128-bit input blocs stored in r4-r7 and r8-r11, respectively, into
 * the 256-bit internal state where the bits are packed as follows:
 * r4 = b_24 b_56 b_88 b_120 || ... || b_0 b_32 b_64 b_96
@@ -261,105 +346,7 @@ ark_sbox:
 mixcolumns_0:
     movw    r12, #0x0303
     movt    r12, #0x0303
-    and     r5, r12, r1, lsr #6     // r5 <- (S0 >> 6) & 0x03030303
-    bic     r9, r1, r12, ror #2     // r9 <- S0 & 0x3f3f3f3f
-    orr     r5, r5, r9, lsl #2      // r5 <- BYTE_ROR_6(S0)
-    eor     r4, r1, r5, ror #8      // r4 <- S0 ^ (BYTE_ROR_6(S0) >>> 8)
-    and     r5, r12, r11, lsr #6    // r5 <- (S7 >> 6) & 0x03030303
-    bic     r9, r11, r12, ror #2    // r9 <- S7 & 0x3f3f3f3f
-    orr     r5, r5, r9, lsl #2      // r5 <- BYTE_ROR_6(S7)
-    eor     r10, r11, r5, ror #8    // r10<- S7 ^ BYTE_ROR_6(S7 >>> 8)
-    bic     r9, r11, r12            // r9 <- S7 & 0xfcfcfcfc
-    eor     r5, r4, r9, ror #26     // r5 <- r4 ^ (r9 >>> 26)
-    and     r9, r11, r12            // r9 <- S7 & 0x03030303
-    eor     r11, r5, r9, ror #18    // r11<- r4 ^ BYTE_ROR_2(S7 >>> 24)
-    and     r9, r12, r10, lsr #6    // r9 <- (r10 >> 6) & 0x03030303
-    bic     r5, r10, r12, ror #2    // r5 <- r10 & 0x3f3f3f3f
-    orr     r5, r9, r5, lsl #2      // r5 <- BYTE_ROR_6(r10)
-    eor     r11, r11, r5, ror #8    // r11 <- S'7
-    eor     r10, r10, r4            // S0^S7 ^ BYTE_ROR_6(S0^S7 >>> 8)
-    and     r5, r12, r2, lsr #6     // r5 <- (S6 >> 6) & 0x03030303
-    bic     r9, r2, r12, ror #2     // r9 <- S6 & 0x3f3f3f3f
-    orr     r5, r5, r9, lsl #2      // r5 <- BYTE_ROR_6(S6)
-    eor     r9, r2, r5, ror #8      // r9 <- S6 ^ BYTE_ROR_6(S6 >>> 8)
-    bic     r5, r2, r12             // r5 <- S6 & 0xfcfcfcfc
-    eor     r10, r10, r5, ror #26   // r10<- r10 ^ (r5 >>> 26)
-    and     r2, r2, r12             // r2 <- S6 & 0x03030303
-    eor     r10, r10, r2, ror #18   // r10<- r4 ^ S7 ^ BYTE_ROR_6(S7 >>> 8) ^ BYTE_ROR_2(S6 >>> 24)
-    and     r5, r12, r9, lsr #6     // r5 <- (r9 >> 6) & 0x03030303
-    bic     r2, r9, r12, ror #2     // r2 <- r9 & 0x3f3f3f3f
-    orr     r2, r5, r2, lsl #2      // r2 <- BYTE_ROR_6(r9)
-    eor     r10, r10, r2, ror #8    // r10<- S'6
-    and     r5, r12, r0, lsr #6     // r5 <- (S5 >> 6) & 0x03030303
-    bic     r2, r0, r12, ror #2     // r2 <- S5 & 0x3f3f3f3f
-    orr     r5, r5, r2, lsl #2      // r5 <- BYTE_ROR_6(S5)
-    eor     r2, r0, r5, ror #8      // r2 <- S5 ^ BYTE_ROR_6(S5 >>> 8)
-    bic     r5, r0, r12             // r5 <- S5 & 0xfcfcfcfc
-    eor     r9, r9, r5, ror #26     // r9 <- r9 ^ (r5 >>> 26)
-    and     r0, r0, r12             // r0 <- S5 & 0x03030303
-    eor     r9, r9, r0, ror #18     // r9 <- S6 ^ BYTE_ROR_6(S6 >>> 8) ^ BYTE_ROR_2(S5 >>> 24)
-    and     r5, r12, r2, lsr #6     // r5 <- (r2 >> 6) & 0x03030303
-    bic     r0, r2, r12, ror #2     // r0 <- r2 & 0x3f3f3f3f
-    orr     r0, r5, r0, lsl #2      // r0 <- BYTE_ROR_6(r2)
-    eor     r9, r9, r0, ror #8      // r9 <- S'5
-    eor     r2, r2, r4              // r2 <- S0^S5 ^ BYTE_ROR_6(S0^S5 >>> 8)
-    and     r5, r12, r8, lsr #6     // r5 <- (S4 >> 6) & 0x03030303
-    bic     r0, r8, r12, ror #2     // r0 <- S4 & 0x3f3f3f3f
-    orr     r5, r5, r0, lsl #2      // r5 <- BYTE_ROR_6(S4)
-    eor     r0, r8, r5, ror #8      // r0 <- S4 ^ BYTE_ROR_6(S4 >>> 8)
-    bic     r5, r8, r12             // r5 <- S4 & 0xfcfcfcfc
-    eor     r2, r2, r5, ror #26     // r2 <- r2 ^ (r5 >>> 26)
-    and     r8, r8, r12             // r8 <- S4 & 0x03030303
-    eor     r8, r2, r8, ror #18     // r8 <- S0^S5 ^ BYTE_ROR_6(S0^S4^S5 >>> 8)^ BYTE_ROR_2(S4 >>> 24)
-    and     r5, r12, r0, lsr #6     // r5 <- (r0 >> 6) & 0x03030303
-    bic     r2, r0, r12, ror #2     // r2 <- r0 & 0x3f3f3f3f
-    orr     r2, r5, r2, lsl #2      // r2 <- BYTE_ROR_6(r0)
-    eor     r8, r8, r2, ror #8      // r8 <- S'4
-    eor     r0, r0, r4              // r0 <- S0^S4 ^ BYTE_ROR_6(S0^S4 >>> 8)
-    and     r5, r12, r7, lsr #6     // r5 <- (S3 >> 6) & 0x03030303
-    bic     r2, r7, r12, ror #2     // r2 <- S3 & 0x3f3f3f3f
-    orr     r5, r5, r2, lsl #2      // r5 <- BYTE_ROR_6(S3)
-    eor     r2, r7, r5, ror #8      // r2 <- S3 ^ BYTE_ROR_6(S3 >>> 8)
-    bic     r5, r7, r12             // r5 <- S3 & 0xfcfcfcfc
-    eor     r0, r0, r5, ror #26     // r0 <- r0 ^ (r5 >>> 26)
-    and     r7, r7, r12             // r7 <- S3 & 0x03030303
-    eor     r7, r0, r7, ror #18     // r7 <- S0^S4 ^ BYTE_ROR_6(S0^S4^S3 >>> 8)^ BYTE_ROR_2(S3 >>> 24)
-    and     r5, r12, r2, lsr #6     // r5 <- (r2 >> 6) & 0x03030303
-    bic     r0, r2, r12, ror #2     // r0 <- r2 & 0x3f3f3f3f
-    orr     r0, r5, r0, lsl #2      // r0 <- BYTE_ROR_6(r2)
-    eor     r7, r7, r0, ror #8      // r7 <- S'3
-    and     r5, r12, r6, lsr #6     // r5 <- (S2 >> 6) & 0x03030303
-    bic     r0, r6, r12, ror #2     // r0 <- S2 & 0x3f3f3f3f
-    orr     r5, r5, r0, lsl #2      // r5 <- BYTE_ROR_6(S2)
-    eor     r0, r6, r5, ror #8      // r0 <- S2 ^ BYTE_ROR_6(S2 >>> 8)
-    bic     r5, r6, r12             // r5 <- S2 & 0xfcfcfcfc
-    eor     r2, r2, r5, ror #26     // r2 <- r2 ^ (r5 >>> 26)
-    and     r6, r6, r12             // r6 <- S2 & 0x03030303
-    eor     r6, r2, r6, ror #18     // r6 <- S3 ^ BYTE_ROR_6(S3^S2 >>> 8)^ BYTE_ROR_2(S2 >>> 24)
-    and     r5, r12, r0, lsr #6     // r5 <- (r0 >> 6) & 0x03030303
-    bic     r2, r0, r12, ror #2     // r2 <- r0 & 0x3f3f3f3f
-    orr     r2, r5, r2, lsl #2      // r2 <- BYTE_ROR_6(r0)
-    eor     r6, r6, r2, ror #8      // r6 <- S'2
-    and     r5, r12, r3, lsr #6     // r5 <- (S1 >> 6) & 0x03030303
-    bic     r2, r3, r12, ror #2     // r2 <- S1 & 0x3f3f3f3f
-    orr     r5, r5, r2, lsl #2      // r5 <- BYTE_ROR_6(S2)
-    eor     r2, r3, r5, ror #8      // r2 <- S1 ^ BYTE_ROR_6(S1 >>> 8)
-    bic     r5, r3, r12             // r5 <- S1 & 0xfcfcfcfc
-    eor     r0, r0, r5, ror #26     // r0 <- r0 ^ (r5 >>> 26)
-    and     r3, r3, r12             // r3 <- S1 & 0x03030303
-    eor     r3, r0, r3, ror #18     // r3 <- S2 ^ BYTE_ROR_6(S2^S1 >>> 8)^ BYTE_ROR_2(S1 >>> 24)
-    and     r5, r12, r2, lsr #6     // r5 <- (r2 >> 6) & 0x03030303
-    bic     r0, r2, r12, ror #2     // r0 <- r2 & 0x3f3f3f3f
-    orr     r0, r5, r0, lsl #2      // r0 <- BYTE_ROR_6(r2)
-    eor     r5, r3, r0, ror #8      // r5 <- S'1
-    bic     r3, r1, r12             // r3 <- S0 & 0xfcfcfcfc
-    eor     r2, r2, r3, ror #26     // r2 <- r2 ^ (r3 >>> 26)
-    and     r1, r1, r12             // r1 <- S0 & 0x03030303
-    eor     r1, r2, r1, ror #18     // r1 <- S1 ^ BYTE_ROR_6(S1 >>> 8)^ BYTE_ROR_2(S0 >>> 24)
-    and     r3, r12, r4, lsr #6     // r3 <- (r4 >> 6) & 0x03030303
-    bic     r4, r4, r12, ror #2     // r4 <- r4 & 0x3f3f3f3f
-    orr     r4, r3, r4, lsl #2      // r4 <- BYTE_ROR_6(r4)
-    eor     r4, r1, r4, ror #8      // r4 <- S'0
+    mc_0_2  r12, 6, 2, 26, 18
     bx      lr
 
 /******************************************************************************
@@ -434,105 +421,7 @@ mixcolumns_1:
 mixcolumns_2:
     movw    r12, #0x3f3f
     movt    r12, #0x3f3f
-    and     r5, r12, r1, lsr #2     // r5 <- (S0 >> 2) & 0x03030303
-    bic     r9, r1, r12, ror #6     // r9 <- S0 & 0x3f3f3f3f
-    orr     r5, r5, r9, lsl #6      // r5 <- BYTE_ROR_2(S0)
-    eor     r4, r1, r5, ror #8      // r4 <- S0 ^ (BYTE_ROR_2(S0) >>> 8)
-    and     r5, r12, r11, lsr #2    // r5 <- (S7 >> 2) & 0x03030303
-    bic     r9, r11, r12, ror #6    // r9 <- S7 & 0x3f3f3f3f
-    orr     r5, r5, r9, lsl #6      // r5 <- BYTE_ROR_2(S7)
-    eor     r10, r11, r5, ror #8    // r10<- S7 ^ BYTE_ROR_2(S7 >>> 8)
-    bic     r9, r11, r12            // r9 <- S7 & 0xfcfcfcfc
-    eor     r5, r4, r9, ror #30     // r5 <- r4 ^ (r9 >>> 30)
-    and     r9, r11, r12            // r9 <- S7 & 0x03030303
-    eor     r11, r5, r9, ror #22    // r11<- r4 ^ BYTE_ROR_2(S7 >>> 24)
-    and     r9, r12, r10, lsr #2    // r9 <- (r10 >> 2) & 0x03030303
-    bic     r5, r10, r12, ror #6    // r5 <- r10 & 0x3f3f3f3f
-    orr     r5, r9, r5, lsl #6      // r5 <- BYTE_ROR_2(r10)
-    eor     r11, r11, r5, ror #8    // r11 <- S'7
-    eor     r10, r10, r4            // S0^S7 ^ BYTE_ROR_2(S0^S7 >>> 8)
-    and     r5, r12, r2, lsr #2     // r5 <- (S6 >> 2) & 0x03030303
-    bic     r9, r2, r12, ror #6     // r9 <- S6 & 0x3f3f3f3f
-    orr     r5, r5, r9, lsl #6      // r5 <- BYTE_ROR_2(S6)
-    eor     r9, r2, r5, ror #8      // r9 <- S6 ^ BYTE_ROR_2(S6 >>> 8)
-    bic     r5, r2, r12             // r5 <- S6 & 0xfcfcfcfc
-    eor     r10, r10, r5, ror #30   // r10<- r10 ^ (r5 >>> 30)
-    and     r2, r2, r12             // r2 <- S6 & 0x03030303
-    eor     r10, r10, r2, ror #22   // r10<- r4 ^ S7 ^ BYTE_ROR_2(S7 >>> 8) ^ BYTE_ROR_6(S6 >>> 24)
-    and     r5, r12, r9, lsr #2     // r5 <- (r9 >> 2) & 0x03030303
-    bic     r2, r9, r12, ror #6     // r2 <- r9 & 0x3f3f3f3f
-    orr     r2, r5, r2, lsl #6      // r2 <- BYTE_ROR_2(r9)
-    eor     r10, r10, r2, ror #8    // r10<- S'6
-    and     r5, r12, r0, lsr #2     // r5 <- (S5 >> 2) & 0x03030303
-    bic     r2, r0, r12, ror #6     // r2 <- S5 & 0x3f3f3f3f
-    orr     r5, r5, r2, lsl #6      // r5 <- BYTE_ROR_2(S5)
-    eor     r2, r0, r5, ror #8      // r2 <- S5 ^ BYTE_ROR_2(S5 >>> 8)
-    bic     r5, r0, r12             // r5 <- S5 & 0xfcfcfcfc
-    eor     r9, r9, r5, ror #30     // r9 <- r9 ^ (r5 >>> 30)
-    and     r0, r0, r12             // r0 <- S5 & 0x03030303
-    eor     r9, r9, r0, ror #22     // r9 <- S6 ^ BYTE_ROR_2(S6 >>> 8) ^ BYTE_ROR_6(S5 >>> 24)
-    and     r5, r12, r2, lsr #2     // r5 <- (r2 >> 2) & 0x03030303
-    bic     r0, r2, r12, ror #6     // r0 <- r2 & 0x3f3f3f3f
-    orr     r0, r5, r0, lsl #6      // r0 <- BYTE_ROR_2(r2)
-    eor     r9, r9, r0, ror #8      // r9 <- S'5
-    eor     r2, r2, r4              // r2 <- S0^S5 ^ BYTE_ROR_2(S0^S5 >>> 8)
-    and     r5, r12, r8, lsr #2     // r5 <- (S4 >> 2) & 0x03030303
-    bic     r0, r8, r12, ror #6     // r0 <- S4 & 0x3f3f3f3f
-    orr     r5, r5, r0, lsl #6      // r5 <- BYTE_ROR_2(S4)
-    eor     r0, r8, r5, ror #8      // r0 <- S4 ^ BYTE_ROR_2(S4 >>> 8)
-    bic     r5, r8, r12             // r5 <- S4 & 0xfcfcfcfc
-    eor     r2, r2, r5, ror #30     // r2 <- r2 ^ (r5 >>> 30)
-    and     r8, r8, r12             // r8 <- S4 & 0x03030303
-    eor     r8, r2, r8, ror #22     // r8 <- S0^S5 ^ BYTE_ROR_2(S0^S4^S5 >>> 8)^ BYTE_ROR_6(S4 >>> 24)
-    and     r5, r12, r0, lsr #2     // r5 <- (r0 >> 2) & 0x03030303
-    bic     r2, r0, r12, ror #6     // r2 <- r0 & 0x3f3f3f3f
-    orr     r2, r5, r2, lsl #6      // r2 <- BYTE_ROR_2(r0)
-    eor     r8, r8, r2, ror #8      // r8 <- S'4
-    eor     r0, r0, r4              // r0 <- S0^S4 ^ BYTE_ROR_2(S0^S4 >>> 8)
-    and     r5, r12, r7, lsr #2     // r5 <- (S3 >> 2) & 0x03030303
-    bic     r2, r7, r12, ror #6     // r2 <- S3 & 0x3f3f3f3f
-    orr     r5, r5, r2, lsl #6      // r5 <- BYTE_ROR_2(S3)
-    eor     r2, r7, r5, ror #8      // r2 <- S3 ^ BYTE_ROR_2(S3 >>> 8)
-    bic     r5, r7, r12             // r5 <- S3 & 0xfcfcfcfc
-    eor     r0, r0, r5, ror #30     // r0 <- r0 ^ (r5 >>> 30)
-    and     r7, r7, r12             // r7 <- S3 & 0x03030303
-    eor     r7, r0, r7, ror #22     // r7 <- S0^S4 ^ BYTE_ROR_2(S0^S4^S3 >>> 8)^ BYTE_ROR_6(S3 >>> 24)
-    and     r5, r12, r2, lsr #2     // r5 <- (r2 >> 2) & 0x03030303
-    bic     r0, r2, r12, ror #6     // r0 <- r2 & 0x3f3f3f3f
-    orr     r0, r5, r0, lsl #6      // r0 <- BYTE_ROR_2(r2)
-    eor     r7, r7, r0, ror #8      // r7 <- S'3
-    and     r5, r12, r6, lsr #2     // r5 <- (S2 >> 2) & 0x03030303
-    bic     r0, r6, r12, ror #6     // r0 <- S2 & 0x3f3f3f3f
-    orr     r5, r5, r0, lsl #6      // r5 <- BYTE_ROR_2(S2)
-    eor     r0, r6, r5, ror #8      // r0 <- S2 ^ BYTE_ROR_2(S2 >>> 8)
-    bic     r5, r6, r12             // r5 <- S2 & 0xfcfcfcfc
-    eor     r2, r2, r5, ror #30     // r2 <- r2 ^ (r5 >>> 30)
-    and     r6, r6, r12             // r6 <- S2 & 0x03030303
-    eor     r6, r2, r6, ror #22     // r6 <- S3 ^ BYTE_ROR_2(S3^S2 >>> 8)^ BYTE_ROR_6(S2 >>> 24)
-    and     r5, r12, r0, lsr #2     // r5 <- (r0 >> 2) & 0x03030303
-    bic     r2, r0, r12, ror #6     // r2 <- r0 & 0x3f3f3f3f
-    orr     r2, r5, r2, lsl #6      // r2 <- BYTE_ROR_2(r0)
-    eor     r6, r6, r2, ror #8      // r6 <- S'2
-    and     r5, r12, r3, lsr #2     // r5 <- (S1 >> 2) & 0x03030303
-    bic     r2, r3, r12, ror #6     // r2 <- S1 & 0x3f3f3f3f
-    orr     r5, r5, r2, lsl #6      // r5 <- BYTE_ROR_2(S2)
-    eor     r2, r3, r5, ror #8      // r2 <- S1 ^ BYTE_ROR_2(S1 >>> 8)
-    bic     r5, r3, r12             // r5 <- S1 & 0xfcfcfcfc
-    eor     r0, r0, r5, ror #30     // r0 <- r0 ^ (r5 >>> 30)
-    and     r3, r3, r12             // r3 <- S1 & 0x03030303
-    eor     r3, r0, r3, ror #22     // r3 <- S2 ^ BYTE_ROR_2(S2^S1 >>> 8)^ BYTE_ROR_6(S1 >>> 24)
-    and     r5, r12, r2, lsr #2     // r5 <- (r2 >> 2) & 0x03030303
-    bic     r0, r2, r12, ror #6     // r0 <- r2 & 0x3f3f3f3f
-    orr     r0, r5, r0, lsl #6      // r0 <- BYTE_ROR_2(r2)
-    eor     r5, r3, r0, ror #8      // r5 <- S'1
-    bic     r3, r1, r12             // r3 <- S0 & 0xfcfcfcfc
-    eor     r2, r2, r3, ror #30     // r2 <- r2 ^ (r3 >>> 30)
-    and     r1, r1, r12             // r1 <- S0 & 0x03030303
-    eor     r1, r2, r1, ror #22     // r1 <- S1 ^ BYTE_ROR_2(S1 >>> 8)^ BYTE_ROR_6(S0 >>> 24)
-    and     r3, r12, r4, lsr #2     // r3 <- (r4 >> 2) & 0x03030303
-    bic     r4, r4, r12, ror #6     // r4 <- r4 & 0x3f3f3f3f
-    orr     r4, r3, r4, lsl #6      // r4 <- BYTE_ROR_2(r4)
-    eor     r4, r1, r4, ror #8      // r4 <- S'0
+    mc_0_2  r12, 2, 6, 30, 22
     bx      lr
 
 /******************************************************************************
@@ -762,7 +651,7 @@ aes128_encrypt_sfs:
     bl      mixcolumns_0            // mixcolumns (round 8)
     bl      ark_sbox                // ark + sbox (round 9)
     bl      double_shiftrows        // to resynchronize with the classical rep
-    ldr   r14, [sp, #48]            // ---------------------------------------
+    ldr     r14, [sp, #48]          // ---------------------------------------
     ldmia   r14!, {r4,r5,r10,r12}   // 
     eor     r4, r1                  // 
     eor     r5, r3                  // 
@@ -836,7 +725,7 @@ aes256_encrypt_sfs:
     bl      mixcolumns_0            // mixcolumns (round 12)
     bl      ark_sbox                // ark + sbox (round 13)
     bl      double_shiftrows        // to resynchronize with the classical rep
-    ldr   r14, [sp, #48]            // ---------------------------------------
+    ldr     r14, [sp, #48]          // ---------------------------------------
     ldmia   r14!, {r4,r5,r10,r12}   // 
     eor     r4, r1                  // 
     eor     r5, r3                  // 
