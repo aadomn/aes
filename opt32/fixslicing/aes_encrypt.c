@@ -8,7 +8,7 @@
 * @author 	Alexandre Adomnicai, Nanyang Technological University, Singapore
 *			alexandre.adomnicai@ntu.edu.sg
 *
-* @date		August 2020
+* @date		October 2020
 ******************************************************************************/
 #include "aes.h"
 #include "internal-aes.h"
@@ -218,6 +218,7 @@ void sbox(uint32_t* state) {
 * Applies the ShiftRows transformation twice (i.e. SR^2) on the internal state.
 ******************************************************************************/
 static void double_shiftrows(uint32_t* state) {
+    uint32_t tmp;
 	for(int i = 0; i < 8; i++)
         SWAPMOVE(state[i], state[i], 0x0f000f00, 4);
 }
