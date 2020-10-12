@@ -8,7 +8,7 @@
 * @author 	Alexandre Adomnicai, Nanyang Technological University, Singapore
 *			alexandre.adomnicai@ntu.edu.sg
 *
-* @date		August 2020
+* @date		October 2020
 ******************************************************************************/
 #include <string.h> 	// for memcpy
 #include "aes.h"
@@ -18,44 +18,29 @@
 * Applies ShiftRows^(-1) on a round key to match the fixsliced representation.
 ******************************************************************************/
 static void inv_shiftrows_1(uint32_t* rkey) {
-	uint32_t t;
+	uint32_t tmp;
 	for(int i = 0; i < 8; i++) {
-		t = (rkey[i] >> 2) & 0x00003f00;
-		t |= (rkey[i] & 0x00000300) << 6;
-		t |= (rkey[i] >> 4) & 0x000f0000;
-		t |= (rkey[i] & 0x000f0000) << 4;
-		t |= (rkey[i] >> 6) & 0x03000000;
-		t |= (rkey[i] & 0x3f000000) << 2;
-		rkey[i] &= 0x000000ff;
-		rkey[i] |= t;
+		SWAPMOVE(rkey[i], rkey[i], 0x0c0f0300, 4);
+		SWAPMOVE(rkey[i], rkey[i], 0x33003300, 2);
 	}
 }
-
 /******************************************************************************
 * Applies ShiftRows^(-2) on a round key to match the fixsliced representation.
 ******************************************************************************/
 static void inv_shiftrows_2(uint32_t* rkey) {
-	uint32_t t;
-	for(int i = 0; i < 8; i++) {
-		t = (rkey[i] >> 4) & 0x0f000f00;
-		t |= ((rkey[i] << 4) & 0xf000f000);
-		rkey[i] = t | (rkey[i] & 0x00ff00ff);
-	}
+	uint32_t tmp;
+	for(int i = 0; i < 8; i++)
+		SWAPMOVE(rkey[i], rkey[i], 0x0f000f00, 4);
 }
 
 /******************************************************************************
 * Applies ShiftRows^(-3) on a round key to match the fixsliced representation.
 ******************************************************************************/
 static void inv_shiftrows_3(uint32_t* rkey) {
-	uint32_t t;
+	uint32_t tmp;
 	for(int i = 0; i < 8; i++) {
-		t = (rkey[i] >> 6) & 0x00000300;
-		t |= (rkey[i] & 0x00003f00) << 2;
-		t |= (rkey[i] >> 4) & 0x000f0000;
-		t |= (rkey[i] & 0x000f0000) << 4;
-		t |= (rkey[i] >> 2) & 0x3f000000;
-		t |= (rkey[i] & 0x03000000) << 6;
-		rkey[i] = t | (rkey[i] & 0x000000ff);
+		SWAPMOVE(rkey[i], rkey[i], 0x030f0c00, 4);
+		SWAPMOVE(rkey[i], rkey[i], 0x33003300, 2);
 	}
 }
 
