@@ -218,11 +218,8 @@ void sbox(uint32_t* state) {
 * Applies the ShiftRows transformation twice (i.e. SR^2) on the internal state.
 ******************************************************************************/
 static void double_shiftrows(uint32_t* state) {
-	for(int i = 0; i < 8; i++) {
-		state[i] = 	(state[i] & 0x00ff00ff) 		|
-					(ROR(state[i], 4) & 0x0f000f00) |
-					(ROR(state[i], 28) & 0xf000f000);
-	}
+	for(int i = 0; i < 8; i++)
+        SWAPMOVE(state[i], state[i], 0x0f000f00, 4);
 }
 
 /******************************************************************************
