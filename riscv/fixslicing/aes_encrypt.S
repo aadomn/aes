@@ -449,65 +449,15 @@ mixcolumns3:
 * Applies the ShiftRows transformation twice (i.e. SR^2) on the internal state.
 ******************************************************************************/
 double_shiftrows:
-	li 		t0, 0x00ff00ff
-	li 		t1, 0x0f000f00
-	slli 	t2, t1, 4
-	and 	t3, s0, t0 						// t3 <- state[0] & 0x00ff00ff
-	rori 	t4, s0, 4, s8, s9 				// t4 <- state[0] >>> 4
-	and 	t4, t4, t1 						// t4 <- t4 & 0x0f00f00
-	or 		t3, t3, t4 						// t3 <- t3 | t4
-	rori 	t4, s0, 28, s8, s9 				// t4 <- state[0] >>> 28
-	and 	t4, t4, t2 						// t4 <- t4 & 0xf000f000
-	or 		s0, t3, t4 						// s0 <- t3 | t4
-	and 	t3, s1, t0 						// t3 <- state[1] & 0x00ff00ff
-	rori 	t4, s1, 4, s8, s9 				// t4 <- state[1] >>> 4
-	and 	t4, t4, t1 						// t4 <- t4 & 0x0f00f00
-	or 		t3, t3, t4 						// t3 <- t3 | t4
-	rori 	t4, s1, 28, s8, s9 				// t4 <- state[1] >>> 28
-	and 	t4, t4, t2 						// t4 <- t4 & 0xf000f000
-	or 		s1, t3, t4 						// s1 <- t3 | t4
-	and 	t3, s2, t0 						// t3 <- state[2] & 0x00ff00ff
-	rori 	t4, s2, 4, s8, s9 				// t4 <- state[2] >>> 4
-	and 	t4, t4, t1 						// t4 <- t4 & 0x0f00f00
-	or 		t3, t3, t4 						// t3 <- t3 | t4
-	rori 	t4, s2, 28, s8, s9 				// t4 <- state[2] >>> 28
-	and 	t4, t4, t2 						// t4 <- t4 & 0xf000f000
-	or 		s2, t3, t4 						// s2 <- t3 | t4
-	and 	t3, s3, t0 						// t3 <- state[3] & 0x00ff00ff
-	rori 	t4, s3, 4, s8, s9 				// t4 <- state[3] >>> 4
-	and 	t4, t4, t1 						// t4 <- t4 & 0x0f00f00
-	or 		t3, t3, t4 						// t3 <- t3 | t4
-	rori 	t4, s3, 28, s8, s9 				// t4 <- state[3] >>> 28
-	and 	t4, t4, t2 						// t4 <- t4 & 0xf000f000
-	or 		s3, t3, t4 						// s3 <- t3 | t4
-	and 	t3, s4, t0 						// t3 <- state[4] & 0x00ff00ff
-	rori 	t4, s4, 4, s8, s9 				// t4 <- state[4] >>> 4
-	and 	t4, t4, t1 						// t4 <- t4 & 0x0f00f00
-	or 		t3, t3, t4 						// t3 <- t3 | t4
-	rori 	t4, s4, 28, s8, s9 				// t4 <- state[4] >>> 28
-	and 	t4, t4, t2 						// t4 <- t4 & 0xf000f000
-	or 		s4, t3, t4 						// s4 <- t3 | t4
-	and 	t3, s5, t0 						// t3 <- state[5] & 0x00ff00ff
-	rori 	t4, s5, 4, s8, s9 				// t4 <- state[5] >>> 4
-	and 	t4, t4, t1 						// t4 <- t4 & 0x0f00f00
-	or 		t3, t3, t4 						// t3 <- t3 | t4
-	rori 	t4, s5, 28, s8, s9 				// t4 <- state[5] >>> 28
-	and 	t4, t4, t2 						// t4 <- t4 & 0xf000f000
-	or 		s5, t3, t4 						// s5 <- t3 | t4
-	and 	t3, s6, t0 						// t3 <- state[6] & 0x00ff00ff
-	rori 	t4, s6, 4, s8, s9 				// t4 <- state[6] >>> 4
-	and 	t4, t4, t1 						// t4 <- t4 & 0x0f00f00
-	or 		t3, t3, t4 						// t3 <- t3 | t4
-	rori 	t4, s6, 28, s8, s9 				// t4 <- state[6] >>> 28
-	and 	t4, t4, t2 						// t4 <- t4 & 0xf000f000
-	or 		s6, t3, t4 						// s6 <- t3 | t4
-	and 	t3, s7, t0 						// t3 <- state[7] & 0x00ff00ff
-	rori 	t4, s7, 4, s8, s9 				// t4 <- state[7] >>> 4
-	and 	t4, t4, t1 						// t4 <- t4 & 0x0f00f00
-	or 		t3, t3, t4 						// t3 <- t3 | t4
-	rori 	t4, s7, 28, s8, s9 				// t4 <- state[7] >>> 28
-	and 	t4, t4, t2 						// t4 <- t4 & 0xf000f000
-	or 		s7, t3, t4 						// s7 <- t3 | t4
+    li         t1, 0x0f000f00
+    swapmove   s0,s0,s0,s0, t1, 4, t0
+    swapmove   s1,s1,s1,s1, t1, 4, t0
+    swapmove   s2,s2,s2,s2, t1, 4, t0
+    swapmove   s3,s3,s3,s3, t1, 4, t0
+    swapmove   s4,s4,s4,s4, t1, 4, t0
+    swapmove   s5,s5,s5,s5, t1, 4, t0
+    swapmove   s6,s6,s6,s6, t1, 4, t0
+    swapmove   s7,s7,s7,s7, t1, 4, t0
     ret
 
 /******************************************************************************
