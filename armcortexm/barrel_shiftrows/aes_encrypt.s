@@ -7,11 +7,22 @@
 * @author   Alexandre Adomnicai, Nanyang Technological University, Singapore
 *           alexandre.adomnicai@ntu.edu.sg
 *
-* @date     August 2020
+* @date     October 2020
 ******************************************************************************/
 
 .syntax unified
 .thumb
+
+/******************************************************************************
+* Macro to compute the SWAPMOVE technique: swap the bits in 'in1' masked by 'm'
+* by the bits in 'in0' masked by 'm << n' and put the results in 'out0', 'out1'
+******************************************************************************/
+.macro swpmv out0, out1, in0, in1, m, n, tmp
+    eor     \tmp, \in1, \in0, lsr \n
+    and     \tmp, \m
+    eor     \out1, \in1, \tmp
+    eor     \out0, \in0, \tmp, lsl \n
+.endm
 
 /******************************************************************************
 * AddRoundKey on a quarter state (i.e. 1024/4 = 256 bits).
@@ -57,28 +68,28 @@ sbox:
     eor     r0, r0, r2      //Exec y11 = y20 ^ y9; into r0
     str.w   r2, [sp, #164]  //Store r2/y9 on stack
     and     r2, r2, r0      //Exec t12 = y9 & y11; into r2
-    str.w   r8, [sp, #160]   //Store r8/y6 on stack
+    str.w   r8, [sp, #160]  //Store r8/y6 on stack
     eor     r8, r11, r0     //Exec y7 = U7 ^ y11; into r8
     eor     r9, r4, r9      //Exec y8 = U0 ^ U5; into r9
     eor     r6, r5, r6      //Exec t0 = U1 ^ U2; into r6
     eor     r5, r14, r6     //Exec y10 = y15 ^ t0; into r5
-    str.w   r14, [sp, #156]  //Store r14/y15 on stack
+    str.w   r14, [sp, #156] //Store r14/y15 on stack
     eor     r14, r5, r0     //Exec y17 = y10 ^ y11; into r14
-    str.w   r1, [sp, #152]   //Store r1/y14 on stack
+    str.w   r1, [sp, #152]  //Store r1/y14 on stack
     and     r1, r1, r14     //Exec t13 = y14 & y17; into r1
     eor     r1, r1, r2      //Exec t14 = t13 ^ t12; into r1
-    str.w   r14, [sp, #148]  //Store r14/y17 on stack
+    str.w   r14, [sp, #148] //Store r14/y17 on stack
     eor     r14, r5, r9     //Exec y19 = y10 ^ y8; into r14
-    str.w   r5, [sp, #144]   //Store r5/y10 on stack
+    str.w   r5, [sp, #144]  //Store r5/y10 on stack
     and     r5, r9, r5      //Exec t15 = y8 & y10; into r5
     eor     r2, r5, r2      //Exec t16 = t15 ^ t12; into r2
     eor     r5, r6, r0      //Exec y16 = t0 ^ y11; into r5
-    str.w   r0, [sp, #140]   //Store r0/y11 on stack
+    str.w   r0, [sp, #140]  //Store r0/y11 on stack
     eor     r0, r3, r5      //Exec y21 = y13 ^ y16; into r0
-    str.w   r3, [sp, #136]   //Store r3/y13 on stack
+    str.w   r3, [sp, #136]  //Store r3/y13 on stack
     and     r3, r3, r5      //Exec t7 = y13 & y16; into r3
-    str.w   r5, [sp, #132]   //Store r5/y16 on stack
-    str.w   r11, [sp, #128]  //Store r11/U7 on stack
+    str.w   r5, [sp, #132]  //Store r5/y16 on stack
+    str.w   r11, [sp, #128] //Store r11/U7 on stack
     eor     r5, r4, r5      //Exec y18 = U0 ^ y16; into r5
     eor     r6, r6, r11     //Exec y1 = t0 ^ U7; into r6
     eor     r7, r6,  r7     //Exec y4 = y1 ^ U3; into r7
@@ -146,17 +157,17 @@ sbox:
     and     r3, r3, r11     //Exec z1 = t37 & y6; into r3
     eor     r3, r3, r7      //Exec tc5 = z1 ^ z0; into r3
     eor     r3, r6, r3      //Exec tc11 = tc6 ^ tc5; into r3
-    ldr.w   r11, [sp, #160]  //Load y4 into r11
-    ldr.w   r5, [sp, #148]   //Load y17 into r5
+    ldr.w   r11, [sp, #160] //Load y4 into r11
+    ldr.w   r5, [sp, #148]  //Load y17 into r5
     and     r11, r12, r11   //Exec z11 = t33 & y4; into r11
     eor     r14, r14, r12   //Exec t42 = t29 ^ t33; into r14
     eor     r1, r14, r1     //Exec t45 = t42 ^ t41; into r1
     and     r5, r1, r5      //Exec z7 = t45 & y17; into r5
     eor     r6, r5, r6      //Exec tc8 = z7 ^ tc6; into r6
-    ldr.w   r5, [sp, #152]   //Load y14 into r5
-    str.w   r4, [sp, #160]   //Store r4/z14 on stack
+    ldr.w   r5, [sp, #152]  //Load y14 into r5
+    str.w   r4, [sp, #160]  //Store r4/z14 on stack
     and     r1, r1, r5      //Exec z16 = t45 & y14; into r1
-    ldr.w   r5, [sp, #140]   //Load y11 into r5
+    ldr.w   r5, [sp, #140]  //Load y11 into r5
     ldr.w   r4, [sp, #164]  //Load y9 into r4
     and     r5, r14, r5     //Exec z6 = t42 & y11; into r5
     eor     r5, r5, r6      //Exec tc16 = z6 ^ tc8; into r5
@@ -170,27 +181,28 @@ sbox:
     eor     r9, r9, r3      //Exec S3 = tc3 ^ tc11; into r9
     eor     r3, r9, r5      //Exec S1 = S3 ^ tc16 ^ 1; into r3
     eor     r11, r10, r4    //Exec tc13 = z13 ^ tc1; into r11
-    ldr.w   r4, [sp, #128]    //Load U7 into r4
+    ldr.w   r4, [sp, #128]  //Load U7 into r4
     and     r12, r12, r4    //Exec z2 = t33 & U7; into r12
     eor     r7, r7, r12     //Exec tc4 = z0 ^ z2; into r7
     eor     r12, r8, r7     //Exec tc7 = z12 ^ tc4; into r12
     eor     r2, r2, r12     //Exec tc9 = z8 ^ tc7; into r2
     eor     r2, r6, r2      //Exec tc10 = tc8 ^ tc9; into r2
-    ldr.w   r4, [sp, #160]   //Load z14 into r4
+    ldr.w   r4, [sp, #160]  //Load z14 into r4
     eor     r12, r4, r2     //Exec tc17 = z14 ^ tc10; into r12
     eor     r0, r0, r12     //Exec S5 = tc21 ^ tc17; into r0
     eor     r6, r12, r14    //Exec tc26 = tc17 ^ tc20; into r6
-    ldr.w   r4, [sp, #144]   //Load z17 into r4
-    ldr.w   r12, [sp, #168]  //Load tc12 into r12
+    ldr.w   r4, [sp, #144]  //Load z17 into r4
+    ldr.w   r12, [sp, #168] //Load tc12 into r12
     eor     r6,  r6,  r4    //Exec S2 = tc26 ^ z17 ^ 1; into r6
     eor     r12, r7, r12    //Exec tc14 = tc4 ^ tc12; into r12
     eor     r14, r11, r12   //Exec tc18 = tc13 ^ tc14; into r14
     eor     r2, r2, r14     //Exec S6 = tc10 ^ tc18 ^ 1; into r2
     eor     r11, r8, r14    //Exec S7 = z12 ^ tc18 ^ 1; into r11
-    ldr     r14, [sp, #176]     //restore link register
+    ldr     r14, [sp, #176] //restore link register
     eor     r4, r12,  r9    //Exec S4 = tc14 ^ S3; into r4
     bx      lr
-    //[('r0', 'S5'), ('r1', 'S0'), ('r2', 'S6'), ('r3', 'S1'), ('r4', 'S4'), ('r6', 'S2'), ('r9', 'S3'), ('r11', 'S7')] 
+    //[('r0', 'S5'), ('r1', 'S0'), ('r2', 'S6'), ('r3', 'S1'),
+    // ('r4', 'S4'), ('r6', 'S2'), ('r9', 'S3'), ('r11', 'S7')] 
 
 /******************************************************************************
 * Shifts the second row.
@@ -446,14 +458,8 @@ packing_0:
 loop_p0:
     ldmia   r2!, {r4-r7}            // load input
     add.w   r3, r3, 1               // increment loop counter
-    eor     r12, r5, r4, lsr #8
-    and     r12, r12, r0
-    eor     r5, r5, r12
-    eor     r4, r4, r12, lsl #8     // SWAPMOVE(r4, r5, 0x00ff00ff, 8)
-    eor     r12, r7, r6, lsr #8
-    and     r12, r12, r0
-    eor     r7, r7, r12
-    eor     r6, r6, r12, lsl #8     // SWAPMOVE(r6, r7, 0x00ff00ff, 8)
+    swpmv   r4, r5, r4, r5, r0, 8, r12
+    swpmv   r6, r7, r6, r7, r0, 8, r12
     str.w   r4, [sp], #4            // store state words on the stack
     str.w   r5, [sp, #28]           // store state words on the stack
     str.w   r6, [sp, #60]           // store state words on the stack
@@ -473,14 +479,8 @@ loop_p1:
     ldrd    r4, r5, [sp]            // load state from the stack
     ldrd    r6, r7, [sp, #64]       // load state from the stack
     add.w   r3, r3, 1               // increment loop counter
-    eor     r12, r6, r4, lsr #16
-    and     r12, r12, r0
-    eor     r6, r6, r12
-    eor     r4, r4, r12, lsl #16    //SWAPMOVE(r4, r6, 0x0000ffff, 16)
-    eor     r12, r7, r5, lsr #16
-    and     r12, r12, r0
-    eor     r7, r7, r12
-    eor     r5, r5, r12, lsl #16     //SWAPMOVE(r5, r7, 0x0000ffff, 8)
+    swpmv   r4, r6, r4, r6, r0, 16, r12
+    swpmv   r5, r7, r5, r7, r0, 16, r12
     strd    r4, r5, [sp], #8         // store state words on the stack
     strd    r6, r7, [sp, #56]        // store state words on the stack    
     cmp     r3, #7
@@ -500,54 +500,18 @@ packing_2:
 loop_p2:
     ldm     sp, {r4-r11}
     add.w   r3, r3, 1
-    eor     r12, r4, r5, lsr #1
-    and     r12, r12, r0
-    eor     r4, r4, r12
-    eor     r5, r5, r12, lsl #1     //SWAPMOVE(r5, r4, 0x55555555, 1)
-    eor     r12, r6, r7, lsr #1
-    and     r12, r12, r0
-    eor     r6, r6, r12
-    eor     r7, r7, r12, lsl #1     //SWAPMOVE(r7, r6, 0x55555555, 1)
-    eor     r12, r8, r9, lsr #1
-    and     r12, r12, r0
-    eor     r8, r8, r12
-    eor     r9, r9, r12, lsl #1     //SWAPMOVE(r9, r8, 0x55555555, 1)
-    eor     r12, r10, r11, lsr #1
-    and     r12, r12, r0
-    eor     r10, r10, r12
-    eor     r11, r11, r12, lsl #1   //SWAPMOVE(r11, r10, 0x55555555, 1)
-    eor     r12, r4, r6, lsr #2
-    and     r12, r12, r1
-    eor     r4, r4, r12
-    eor     r6, r6, r12, lsl #2     //SWAPMOVE(r6, r4, 0x33333333, 2)
-    eor     r12, r5, r7, lsr #2
-    and     r12, r12, r1
-    eor     r5, r5, r12
-    eor     r7, r7, r12, lsl #2     //SWAPMOVE(r7, r5, 0x33333333, 2)
-    eor     r12, r8, r10, lsr #2
-    and     r12, r12, r1
-    eor     r8, r8, r12
-    eor     r10, r10, r12, lsl #2   //SWAPMOVE(r10, r8, 0x33333333, 2)
-    eor     r12, r9, r11, lsr #2
-    and     r12, r12, r1
-    eor     r9, r9, r12
-    eor     r11, r11, r12, lsl #2   //SWAPMOVE(r11, r9, 0x33333333, 2)
-    eor     r12, r4, r8, lsr #4
-    and     r12, r12, r2
-    eor     r4, r4, r12
-    eor     r8, r8, r12, lsl #4     //SWAPMOVE(r8, r4, 0x0f0f0f0f, 4)
-    eor     r12, r5, r9, lsr #4
-    and     r12, r12, r2
-    eor     r5, r5, r12
-    eor     r9, r9, r12, lsl #4     //SWAPMOVE(r9, r5, 0x0f0f0f0f, 4)
-    eor     r12, r6, r10, lsr #4
-    and     r12, r12, r2
-    eor     r6, r6, r12
-    eor     r10, r10, r12, lsl #4   //SWAPMOVE(r10, r6, 0x0f0f0f0f, 4)
-    eor     r12, r7, r11, lsr #4
-    and     r12, r12, r2
-    eor     r7, r7, r12
-    eor     r11, r11, r12, lsl #4   //SWAPMOVE(r11, r7, 0x0f0f0f0f, 4)
+    swpmv   r5, r4, r5, r4, r0, 1, r12
+    swpmv   r7, r6, r7, r6, r0, 1, r12
+    swpmv   r9, r8, r9, r8, r0, 1, r12
+    swpmv   r11, r10, r11, r10, r0, 1, r12
+    swpmv   r6, r4, r6, r4, r1, 2, r12
+    swpmv   r7, r5, r7, r5, r1, 2, r12
+    swpmv   r10, r8, r10, r8, r1, 2, r12
+    swpmv   r11, r9, r11, r9, r1, 2, r12
+    swpmv   r8, r4, r8, r4, r2, 4, r12
+    swpmv   r9, r5, r9, r5, r2, 4, r12
+    swpmv   r10, r6, r10, r6, r2, 4, r12
+    swpmv   r11, r7, r11, r7, r2, 4, r12
     stmia   sp!, {r4-r11}           // store the state words on the stack
     cmp     r3, #3
     ble     loop_p2                 //loop until r3 <= 3
@@ -567,14 +531,8 @@ loop_up0:
     ldr.w   r6, [sp, #60]
     ldr.w   r7, [sp, #92]
     add.w   r3, r3, 1               // increment loop counter
-    eor     r12, r5, r4, lsr #8
-    and     r12, r12, r0
-    eor     r5, r5, r12
-    eor     r4, r4, r12, lsl #8     // SWAPMOVE(r4, r5, 0x00ff00ff, 8)
-    eor     r12, r7, r6, lsr #8
-    and     r12, r12, r0
-    eor     r7, r7, r12
-    eor     r6, r6, r12, lsl #8     // SWAPMOVE(r6, r7, 0x00ff00ff, 8)
+    swpmv   r4, r5, r4, r5, r0, 8, r12
+    swpmv   r6, r7, r6, r7, r0, 8, r12
     stmia   r2!, {r4-r7}            // store to output array
     cmp     r3, #7      
     ble     loop_up0                // loop until r3 <= 7
@@ -593,54 +551,18 @@ unpacking_2:
 loop_up2:
     ldm     sp, {r4-r11}
     add.w   r3, r3, 1
-    eor     r12, r4, r8, lsr #4
-    and     r12, r12, r2
-    eor     r4, r4, r12
-    eor     r8, r8, r12, lsl #4     //SWAPMOVE(r8, r4, 0x0f0f0f0f, 4)
-    eor     r12, r5, r9, lsr #4
-    and     r12, r12, r2
-    eor     r5, r5, r12
-    eor     r9, r9, r12, lsl #4     //SWAPMOVE(r9, r5, 0x0f0f0f0f, 4)
-    eor     r12, r6, r10, lsr #4
-    and     r12, r12, r2
-    eor     r6, r6, r12
-    eor     r10, r10, r12, lsl #4   //SWAPMOVE(r10, r6, 0x0f0f0f0f, 4)
-    eor     r12, r7, r11, lsr #4
-    and     r12, r12, r2
-    eor     r7, r7, r12
-    eor     r11, r11, r12, lsl #4   //SWAPMOVE(r11, r7, 0x0f0f0f0f, 4)
-    eor     r12, r4, r6, lsr #2
-    and     r12, r12, r1
-    eor     r4, r4, r12
-    eor     r6, r6, r12, lsl #2     //SWAPMOVE(r6, r4, 0x33333333, 2)
-    eor     r12, r5, r7, lsr #2
-    and     r12, r12, r1
-    eor     r5, r5, r12
-    eor     r7, r7, r12, lsl #2     //SWAPMOVE(r7, r5, 0x33333333, 2)
-    eor     r12, r8, r10, lsr #2
-    and     r12, r12, r1
-    eor     r8, r8, r12
-    eor     r10, r10, r12, lsl #2   //SWAPMOVE(r10, r8, 0x33333333, 2)
-    eor     r12, r9, r11, lsr #2
-    and     r12, r12, r1
-    eor     r9, r9, r12
-    eor     r11, r11, r12, lsl #2   //SWAPMOVE(r11, r9, 0x33333333, 2)
-    eor     r12, r4, r5, lsr #1
-    and     r12, r12, r0
-    eor     r4, r4, r12
-    eor     r5, r5, r12, lsl #1     //SWAPMOVE(r5, r4, 0x55555555, 1)
-    eor     r12, r6, r7, lsr #1
-    and     r12, r12, r0
-    eor     r6, r6, r12
-    eor     r7, r7, r12, lsl #1     //SWAPMOVE(r7, r6, 0x55555555, 1)
-    eor     r12, r8, r9, lsr #1
-    and     r12, r12, r0
-    eor     r8, r8, r12
-    eor     r9, r9, r12, lsl #1     //SWAPMOVE(r9, r8, 0x55555555, 1)
-    eor     r12, r10, r11, lsr #1
-    and     r12, r12, r0
-    eor     r10, r10, r12
-    eor     r11, r11, r12, lsl #1   //SWAPMOVE(r11, r10, 0x55555555, 1)
+    swpmv   r8, r4, r8, r4, r2, 4, r12
+    swpmv   r9, r5, r9, r5, r2, 4, r12
+    swpmv   r10, r6, r10, r6, r2, 4, r12
+    swpmv   r11, r7, r11, r7, r2, 4, r12
+    swpmv   r6, r4, r6, r4, r1, 2, r12
+    swpmv   r7, r5, r7, r5, r1, 2, r12
+    swpmv   r10, r8, r10, r8, r1, 2, r12
+    swpmv   r11, r9, r11, r9, r1, 2, r12
+    swpmv   r5, r4, r5, r4, r0, 1, r12
+    swpmv   r7, r6, r7, r6, r0, 1, r12
+    swpmv   r9, r8, r9, r8, r0, 1, r12
+    swpmv   r11, r10, r11, r10, r0, 1, r12
     stmia   sp!, {r4-r11}           // store the state words on the stack
     cmp     r3, #3
     ble     loop_up2                //loop until r3 <= 3
