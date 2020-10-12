@@ -70,7 +70,7 @@ static void xor_columns(uint32_t* rkeys, int idx_xor, int idx_ror) {
 /******************************************************************************
 * Fully bitsliced AES-128 key schedule to match the fully-fixsliced (ffs)
 * representation. Note that it is possible to pass two different keys as input
-* parameters if one wants to encrypt 2 blocks in with two different keys.
+* parameters if one wants to encrypt 2 blocks with two different keys.
 ******************************************************************************/
 void aes128_keyschedule_ffs(uint32_t* rkeys, const unsigned char* key0,
 						const unsigned char* key1) {
@@ -139,7 +139,7 @@ void aes128_keyschedule_ffs(uint32_t* rkeys, const unsigned char* key0,
 /******************************************************************************
 * Fully bitsliced AES-256 key schedule to match the fully-fixsliced (ffs)
 * representation. Note that it is possible to pass two different keys as input
-* parameters if one wants to encrypt 2 blocks in with two different keys.
+* parameters if one wants to encrypt 2 blocks with two different keys.
 ******************************************************************************/
 void aes256_keyschedule_ffs(uint32_t* rkeys, const unsigned char* key0,
 						const unsigned char* key1) {
@@ -212,7 +212,7 @@ void aes256_keyschedule_ffs(uint32_t* rkeys, const unsigned char* key0,
 /******************************************************************************
 * Fully bitsliced AES-128 key schedule to match the semi-fixsliced (sfs)
 * representation. Note that it is possible to pass two different keys as input
-* parameters if one wants to encrypt 2 blocks in with two different keys.
+* parameters if one wants to encrypt 2 blocks with two different keys.
 ******************************************************************************/
 void aes128_keyschedule_sfs(uint32_t* rkeys, const unsigned char* key0,
 						const unsigned char* key1) {
@@ -279,7 +279,7 @@ void aes128_keyschedule_sfs(uint32_t* rkeys, const unsigned char* key0,
 /******************************************************************************
 * Fully bitsliced AES-256 key schedule to match the fully-fixsliced (ffs)
 * representation. Note that it is possible to pass two different keys as input
-* parameters if one wants to encrypt 2 blocks in with two different keys.
+* parameters if one wants to encrypt 2 blocks with two different keys.
 ******************************************************************************/
 void aes256_keyschedule_sfs(uint32_t* rkeys, const unsigned char* key0,
 						const unsigned char* key1) {
