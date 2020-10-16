@@ -1,6 +1,6 @@
 # Fast constant-time AES implementations on 32-bit architectures
 
-This repository contains efficient constant-time implementations for the Advanced Encryption Standard (AES) algorithm as supplementary material for the paper [Fixslicing AES-like Ciphers - New bitsliced AES speed records on ARM Cortex-M and RISC-V](https://eprint.iacr.org/2020/1123.pdf) published in [TCHES](https://tches.iacr.org/index.php/TCHES/index) 2021, Volume 1.
+This repository contains efficient constant-time implementations for the Advanced Encryption Standard (AES) algorithm as supplementary material for the paper [Fixslicing AES-like Ciphers - New bitsliced AES speed records on ARM Cortex-M and RISC-V](https://eprint.iacr.org/2020/1123.pdf) published in [TCHES 2021/1](https://tches.iacr.org/index.php/TCHES/issue/archive).
 
 ## Structure of the repository
 
@@ -10,17 +10,17 @@ aes
 │   README.md
 │   LICENSE   
 │
-└───armcortexm
-│   └───1storder_masking
-│   └───barrel_shiftrows
+├───armcortexm
+│   ├───1storder_masking
+│   ├───barrel_shiftrows
 │   └───fixslicing
 │   
-└───opt32
-│   └───barrel_shiftrows
+├───opt32
+│   ├───barrel_shiftrows
 │   └───fixslicing
 │   
-└───riscv
-│   └───barrel_shiftrows
+├───riscv
+│   ├───barrel_shiftrows
 │   └───fixslicing
 ```
 where `armcortexm` and `riscv` directories respectively refer to assembly implementations for ARM Cortex-M and RV32I, whereas `opt32` refers to C language implementations. Note that the main goal of the `opt32` directory is to provide cross-platform implementations and to serve a didactic purpose. Therefore if you intend to run it for benchmarking, you should consider some modifications regarding execution speed.
@@ -45,11 +45,11 @@ Since the fixsliced representations require 4 times less RAM to store all the ro
 
 | Algorithm                | Parallel blocks | ARM Cortex-M3 | E31 RISC-V core       |
 |:-------------------------|:---------------:|:-------------:|:---------------------:|
-| AES-128 semi-fixsliced   | 2               | 91.3          | 108.3                 |
-| AES-128 fully-fixsliced  | 2               | 87.3          | 101.6                 |
+| AES-128 semi-fixsliced   | 2               | 89.9          | 104.3                 |
+| AES-128 fully-fixsliced  | 2               | 87.1          | 100.3                 |
 | AES-128 barrel-shiftrows | 8               | 94.8          | 78.9                  |
-| AES-256 semi-fixsliced   | 2               | 125.8         | 153.4                 |
-| AES-256 fully-fixsliced  | 2               | 119.8         | 139.1                 |
+| AES-256 semi-fixsliced   | 2               | 123.8         | 144.1                 |
+| AES-256 fully-fixsliced  | 2               | 119.5         | 137.8                 |
 | AES-256 barrel-shiftrows | 8               | 127.9         | 105.7                 |
 
 ## First-order masking
@@ -58,7 +58,7 @@ A first-order masked implementation based on fixslicing can be found in `armcort
 
 | Algorithm                                 | Parallel blocks | ARM Cortex-M4 |
 |:------------------------------------------|:---------------:|:-------------:|
-| 1st-order masked AES-128 semi-fixsliced   | 2               | 200.7         |
-| 1st-order masked AES-128 fully-fixsliced  | 2               | 196           |
+| 1st-order masked AES-128 semi-fixsliced   | 2               | 199.3         |
+| 1st-order masked AES-128 fully-fixsliced  | 2               | 195.8         |
 
 :warning::rotating_light: This masking scheme was mainly introduced to achieve first-order masking while limiting the amount of randomness to generate. Please be aware that other first-order masking schemes provide a better security level. Note that no practical evaluation has been undertaken to assess the security of our masked implementations! :rotating_light::warning: 
