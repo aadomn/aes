@@ -42,73 +42,51 @@
 * differing.
 ******************************************************************************/
 .macro mc_0_2   m, n0, n1, n2, n3
-    byteror r5, r1, \m, \n0, \n1, r9    // r5 <- BYTE_ROR_n0(S0)
-    eor     r4, r1, r5, ror #8          // r4 <- S0 ^ (BYTE_ROR_6(S0) >>> 8)
+    byteror r14, r1, \m, \n0, \n1, r9   // r14 <- BYTE_ROR_n0(S0)
+    eor     r4, r1, r14, ror #8         // r4 <- S0 ^ (BYTE_ROR_6(S0) >>> 8)
+    movw    r1, #0x0f0f
+    movt    r1, #0x0f0f                 // r1 <- 0x0f0f0f0f (for BYTE_ROR)
     byteror r5, r11, \m, \n0, \n1, r9   // r5 <- BYTE_ROR_n0(S7)
-    eor     r10, r11, r5, ror #8        // r10<- S7 ^ BYTE_ROR_6(S7 >>> 8)
-    bic     r9, r11, \m                 // r9 <- S7 & ~m
-    eor     r5, r4, r9, ror \n2         // r5 <- r4 ^ (r9 >>> 26)
-    and     r9, r11, \m                 // r9 <- S7 & m
-    eor     r11, r5, r9, ror \n3        // r11<- r4 ^ BYTE_ROR_n1(S7 >>> 24)
-    byteror r5, r10, \m, \n0, \n1, r9   // r5 <- BYTE_ROR_n0(r10)
-    eor     r11, r11, r5, ror #8        // r11 <- S'7
-    eor     r10, r10, r4                // S0^S7 ^ BYTE_ROR_n0(S0^S7 >>> 8)
+    eor     r10, r11, r5, ror #8        // r10<- S7 ^ BYTE_ROR_n0(S7 >>> 8)
+    byteror r11, r10, r1, 4, 4, r9      // r11<- BYTE_ROR_4(r10)
+    eor     r11, r4, r11, ror #16       // r11<- BYTE_ROR_4(r10) ^ (r10 >>> 16)
+    eor     r11, r11, r5, ror #8        // r11<- S'7
     byteror r5, r2, \m, \n0, \n1, r9    // r5 <- BYTE_ROR_n0(S6)
-    eor     r9, r2, r5, ror #8          // r9 <- S6 ^ BYTE_ROR_6(S6 >>> 8)
-    bic     r5, r2, \m                  // r5 <- S6 & ~m
-    eor     r10, r10, r5, ror \n2       // r10<- r10 ^ (r5 >>> 26)
-    and     r2, r2, \m                  // r2 <- S6 & m
-    eor     r10, r10, r2, ror \n3       // r10<- r4 ^ S7 ^ BYTE_ROR_n0(S7 >>> 8) ^ BYTE_ROR_n1(S6 >>> 24)
-    byteror r2, r9, \m, \n0, \n1, r5    // r2 <- BYTE_ROR_n0(r9)
-    eor     r10, r10, r2, ror #8        // r10<- S'6
-    byteror r5, r0, \m, \n0, \n1, r2    // r5 <- BYTE_ROR_n0(S5)
-    eor     r2, r0, r5, ror #8          // r2 <- S5 ^ BYTE_ROR_6(S5 >>> 8)
-    bic     r5, r0, \m                  // r5 <- S5 & ~m
-    eor     r9, r9, r5, ror \n2         // r9 <- r9 ^ (r5 >>> 26)
-    and     r0, r0, \m                  // r0 <- S5 & m
-    eor     r9, r9, r0, ror \n3         // r9 <- S6 ^ BYTE_ROR_n0(S6 >>> 8) ^ BYTE_ROR_n1(S5 >>> 24)
-    byteror r0, r2, \m, \n0, \n1, r5    // r0 <- BYTE_ROR_n0(r2)
-    eor     r9, r9, r0, ror #8          // r9 <- S'5
-    eor     r2, r2, r4                  // r2 <- S0^S5 ^ BYTE_ROR_n0(S0^S5 >>> 8)
-    byteror r5, r8, \m, \n0, \n1, r0    // r5 <- BYTE_ROR_n0(S4)
-    eor     r0, r8, r5, ror #8          // r0 <- S4 ^ BYTE_ROR_6(S4 >>> 8)
-    bic     r5, r8, \m                  // r5 <- S4 & ~m
-    eor     r2, r2, r5, ror \n2         // r2 <- r2 ^ (r5 >>> 26)
-    and     r8, r8, \m                  // r8 <- S4 & m
-    eor     r8, r2, r8, ror \n3         // r8 <- S0^S5 ^ BYTE_ROR_n0(S0^S4^S5 >>> 8)^ BYTE_ROR_n1(S4 >>> 24)
-    byteror r2, r0, \m, \n0, \n1, r5    // r2 <- BYTE_ROR_n0(r0)
-    eor     r8, r8, r2, ror #8          // r8 <- S'4
-    eor     r0, r0, r4                  // r0 <- S0^S4 ^ BYTE_ROR_n0(S0^S4 >>> 8)
-    byteror r5, r7, \m, \n0, \n1, r2    // r5 <- BYTE_ROR_n0(S3)
-    eor     r2, r7, r5, ror #8          // r2 <- S3 ^ BYTE_ROR_6(S3 >>> 8)
-    bic     r5, r7, \m                  // r5 <- S3 & ~m
-    eor     r0, r0, r5, ror \n2         // r0 <- r0 ^ (r5 >>> 26)
-    and     r7, r7, \m                  // r7 <- S3 & m
-    eor     r7, r0, r7, ror \n3         // r7 <- S0^S4 ^ BYTE_ROR_n0(S0^S4^S3 >>> 8)^ BYTE_ROR_n1(S3 >>> 24)
-    byteror r0, r2, \m, \n0, \n1, r5    // r0 <- BYTE_ROR_n0(r2)
-    eor     r7, r7, r0, ror #8          // r7 <- S'3
-    byteror r5, r6, \m, \n0, \n1, r0    // r5 <- BYTE_ROR_n0(S2)
-    eor     r0, r6, r5, ror #8          // r0 <- S2 ^ BYTE_ROR_6(S2 >>> 8)
-    bic     r5, r6, \m                  // r5 <- S2 & ~m
-    eor     r2, r2, r5, ror \n2         // r2 <- r2 ^ (r5 >>> 26)
-    and     r6, r6, \m                  // r6 <- S2 & m
-    eor     r6, r2, r6, ror \n3         // r6 <- S3 ^ BYTE_ROR_n0(S3^S2 >>> 8)^ BYTE_ROR_n1(S2 >>> 24)
-    byteror r2, r0, \m, \n0, \n1, r5    // r2 <- BYTE_ROR_n0(r0)
-    eor     r6, r6, r2, ror #8          // r6 <- S'2
-    byteror r5, r3, \m, \n0, \n1, r2    // r5 <- BYTE_ROR_n0(S2)
-    eor     r2, r3, r5, ror #8          // r2 <- S1 ^ BYTE_ROR_6(S1 >>> 8)
-    bic     r5, r3, \m                  // r5 <- S1 & ~m
-    eor     r0, r0, r5, ror \n2         // r0 <- r0 ^ (r5 >>> 26)
-    and     r3, r3, \m                  // r3 <- S1 & m
-    eor     r3, r0, r3, ror \n3         // r3 <- S2 ^ BYTE_ROR_n0(S2^S1 >>> 8)^ BYTE_ROR_n1(S1 >>> 24)
-    byteror r0, r2, \m, \n0, \n1, r5    // r0 <- BYTE_ROR_n0(r2)
-    eor     r5, r3, r0, ror #8          // r5 <- S'1
-    bic     r3, r1, \m                  // r3 <- S0 & ~m
-    eor     r2, r2, r3, ror \n2         // r2 <- r2 ^ (r3 >>> 26)
-    and     r1, r1, \m                  // r1 <- S0 & m
-    eor     r1, r2, r1, ror \n3         // r1 <- S1 ^ BYTE_ROR_n0(S1 >>> 8)^ BYTE_ROR_n1(S0 >>> 24)
-    byteror r3, r4, \m, \n0, \n1, r2    // r3 <- BYTE_ROR_n0(r4)
-    eor     r4, r1, r3, ror #8          // r4 <- S'0
+    eor     r2, r2, r5, ror #8          // r2 <- S6 ^ BYTE_ROR_n0(S6 >>> 8)
+    eor     r10, r10, r5, ror #8        // r10<- r10 ^ (BYTE_ROR_n0(S6) >>> 8)
+    byteror r5, r2, r1, 4, 4, r9        // r5 <- BYTE_ROR_4(r2)
+    eor     r10, r10, r5, ror #16       // r10<- r10 ^ (r5 >>> 16)
+    eor     r10, r10, r4                // r10<- S'6
+    byteror r5, r0, \m, \n0, \n1, r9    // r5 <- BYTE_ROR_n0(S5)
+    eor     r0, r0, r5, ror #8          // r0 <- S5 ^ BYTE_ROR_6(S5 >>> 8)
+    eor     r9, r2, r5, ror #8          // r9 <- r2 ^ (BYTE_ROR_n0(S5) >>> 8)
+    byteror r5, r0, r1, 4, 4, r2        // r5 <- BYTE_ROR_4(r0)
+    eor     r9, r9, r5, ror #16         // r9 <- S'5
+    byteror r5, r8, \m, \n0, \n1, r2    // r5 <- BYTE_ROR_n0(S4)
+    eor     r2, r8, r5, ror #8          // r2 <- S4 ^ BYTE_ROR_6(S4 >>> 8)
+    eor     r8, r0, r5, ror #8          // r8 <- r0 ^ (BYTE_ROR_n0(S4) >>> 8)
+    byteror r5, r2, r1, 4, 4, r0        // r5 <- BYTE_ROR_4(r2)
+    eor     r8, r8, r5, ror #16         // r8 <- r8 ^ (r5 >>> 16)
+    eor     r8, r8, r4                  // r8 <- S'4
+    byteror r5, r7, \m, \n0, \n1, r0    // r5 <- BYTE_ROR_n0(S3)
+    eor     r0, r7, r5, ror #8          // r0 <- S3 ^ BYTE_ROR_6(S3 >>> 8)
+    eor     r7, r2, r5, ror #8          // r2 ^ (BYTE_ROR_n0(S3) >>> 8)
+    byteror r5, r0, r1, 4, 4, r2        // r5 <- BYTE_ROR_4(r0)
+    eor     r7, r7, r5, ror #16         // r7 <- r7 ^ (r5 >>> 16)
+    eor     r7, r7, r4                  // r7 <- S'3
+    byteror r5, r6, \m, \n0, \n1, r2    // r5 <- BYTE_ROR_n0(S2)
+    eor     r2, r6, r5, ror #8          // r2 <- S2 ^ BYTE_ROR_6(S2 >>> 8)
+    eor     r6, r0, r5, ror #8          // r6 <- r0 ^ (BYTE_ROR_n0(S2) >>> 8)
+    byteror r5, r2, r1, 4, 4, r0        // r5 <- BYTE_ROR_4(r2)
+    eor     r6, r6, r5, ror #16         // r6 <- S'2
+    byteror r5, r3, \m, \n0, \n1, r0    // r5 <- BYTE_ROR_n0(S1)
+    eor     r0, r3, r5, ror #8          // r0 <- S1 ^ BYTE_ROR_6(S1 >>> 8)
+    eor     r3, r2, r5, ror #8          // r3 <- r0 ^ (BYTE_ROR_n0(S1) >>> 8)
+    byteror r5, r0, r1, 4, 4, r2        // r5 <- BYTE_ROR_4(r0)
+    eor     r5, r3, r5, ror #16         // r5 <- S'1
+    eor     r14, r0, r14, ror #8        // r14<- r0 ^ (BYTE_ROR_n0(S0) >>> 8)
+    byteror r0, r4, r1, 4, 4, r2        // r0 <- BYTE_ROR_4(r4)
+    eor     r4, r14, r0, ror #16        // r4 <- S'0
 .endm
 
 /******************************************************************************
@@ -344,9 +322,11 @@ ark_sbox:
 ******************************************************************************/
 .align 2
 mixcolumns_0:
+    str     r14, [sp, #52]          // store link register
     movw    r12, #0x0303
     movt    r12, #0x0303
     mc_0_2  r12, 6, 2, 26, 18
+    ldr     r14, [sp, #52]          // restore link register
     bx      lr
 
 /******************************************************************************
@@ -419,9 +399,11 @@ mixcolumns_1:
 ******************************************************************************/
 .align 2
 mixcolumns_2:
+    str     r14, [sp, #52]          // store link register
     movw    r12, #0x3f3f
     movt    r12, #0x3f3f
     mc_0_2  r12, 2, 6, 30, 22
+    ldr     r14, [sp, #52]          // restore link register
     bx      lr
 
 /******************************************************************************
