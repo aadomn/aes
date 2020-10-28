@@ -261,52 +261,52 @@ static void mixcolumns_0(uint32_t* state) {
 * For fully-fixsliced implementations only, for round i s.t. (i%4) == 1.
 ******************************************************************************/
 static void mixcolumns_1(uint32_t* state) {
-	uint32_t tmp0, tmp1, tmp2;
-	tmp0 = state[0] ^ ROR(BYTE_ROR_4(state[0]),8);
-	tmp1 = state[7] ^ ROR(BYTE_ROR_4(state[7]),8);
-	tmp2 = state[6];
-	state[6] = tmp1 ^ tmp0;
-	state[7] ^= state[6] ^ ROR(tmp1,16);
-	tmp1 =  ROR(BYTE_ROR_4(tmp2),8);
-	state[6] ^= tmp1;
-	tmp1 ^= tmp2;
-	state[6] ^= ROR(tmp1,16);
-	tmp2 = state[5];
-	state[5] = tmp1;
-	tmp1 =  ROR(BYTE_ROR_4(tmp2),8);
-	state[5] ^= tmp1;
-	tmp1 ^= tmp2;
-	state[5] ^= ROR(tmp1,16);
-	tmp2 = state[4];
-	state[4] = tmp1 ^ tmp0;
-	tmp1 =  ROR(BYTE_ROR_4(tmp2),8);
-	state[4] ^= tmp1;
-	tmp1 ^= tmp2;
-	state[4] ^= ROR(tmp1,16);
-	tmp2 = state[3];
-	state[3] = tmp1 ^ tmp0;
-	tmp1 =  ROR(BYTE_ROR_4(tmp2),8);
-	state[3] ^= tmp1;
-	tmp1 ^= tmp2;
-	state[3] ^= ROR(tmp1,16);
-	tmp2 = state[2];
-	state[2] = tmp1;
-	tmp1 = ROR(BYTE_ROR_4(tmp2),8);
-	state[2] ^= tmp1;
-	tmp1 ^= tmp2;
-	state[2] ^= ROR(tmp1,16);
-	tmp2 = state[1];
-	state[1] = tmp1;
-	tmp1 = ROR(BYTE_ROR_4(tmp2),8);
-	state[1] ^= tmp1;
-	tmp1 ^= tmp2;
-	state[1] ^= ROR(tmp1,16);
-	tmp2 = state[0];
-	state[0] = tmp1;
-	tmp1 = ROR(BYTE_ROR_4(tmp2),8);
-	state[0] ^= tmp1;
-	tmp1 ^= tmp2;
-	state[0] ^= ROR(tmp1,16);
+	uint32_t t0, t1, t2;
+	t0 = state[0] ^ ROR(BYTE_ROR_4(state[0]),8);
+	t1 = state[7] ^ ROR(BYTE_ROR_4(state[7]),8);
+	t2 = state[6];
+	state[6] = t1 ^ t0;
+	state[7] ^= state[6] ^ ROR(t1,16);
+	t1 =  ROR(BYTE_ROR_4(t2),8);
+	state[6] ^= t1;
+	t1 ^= t2;
+	state[6] ^= ROR(t1,16);
+	t2 = state[5];
+	state[5] = t1;
+	t1 =  ROR(BYTE_ROR_4(t2),8);
+	state[5] ^= t1;
+	t1 ^= t2;
+	state[5] ^= ROR(t1,16);
+	t2 = state[4];
+	state[4] = t1 ^ t0;
+	t1 =  ROR(BYTE_ROR_4(t2),8);
+	state[4] ^= t1;
+	t1 ^= t2;
+	state[4] ^= ROR(t1,16);
+	t2 = state[3];
+	state[3] = t1 ^ t0;
+	t1 =  ROR(BYTE_ROR_4(t2),8);
+	state[3] ^= t1;
+	t1 ^= t2;
+	state[3] ^= ROR(t1,16);
+	t2 = state[2];
+	state[2] = t1;
+	t1 = ROR(BYTE_ROR_4(t2),8);
+	state[2] ^= t1;
+	t1 ^= t2;
+	state[2] ^= ROR(t1,16);
+	t2 = state[1];
+	state[1] = t1;
+	t1 = ROR(BYTE_ROR_4(t2),8);
+	state[1] ^= t1;
+	t1 ^= t2;
+	state[1] ^= ROR(t1,16);
+	t2 = state[0];
+	state[0] = t1;
+	t1 = ROR(BYTE_ROR_4(t2),8);
+	state[0] ^= t1;
+	t1 ^= t2;
+	state[0] ^= ROR(t1,16);
 }
 
 /******************************************************************************
@@ -348,23 +348,23 @@ static void mixcolumns_2(uint32_t* state) {
 * Based on Käsper-Schwabe, similar to https://github.com/Ko-/aes-armcortexm.
 ******************************************************************************/
 static void mixcolumns_3(uint32_t* state) {
-	uint32_t tmp0, tmp1, tmp2;
-	tmp0 = state[7] ^ ROR(state[7],8);
-	tmp2 = state[0] ^ ROR(state[0],8);
-	state[7] = tmp2 ^ ROR(state[7], 8) ^ ROR(tmp0, 16);
-	tmp1 = state[6] ^ ROR(state[6],8);
-	state[6] = tmp0 ^ tmp2 ^ ROR(state[6], 8) ^ ROR(tmp1,16);
-	tmp0 = state[5] ^ ROR(state[5],8);
-	state[5] = tmp1 ^ ROR(state[5],8) ^ ROR(tmp0,16);
-	tmp1 = state[4] ^ ROR(state[4],8);
-	state[4] = tmp0 ^ tmp2 ^ ROR(state[4],8) ^ ROR(tmp1,16);
-	tmp0 = state[3] ^ ROR(state[3],8);
-	state[3] = tmp1 ^ tmp2 ^ ROR(state[3],8) ^ ROR(tmp0,16);
-	tmp1 = state[2] ^ ROR(state[2],8);
-	state[2] = tmp0 ^ ROR(state[2],8) ^ ROR(tmp1,16);
-	tmp0 = state[1] ^ ROR(state[1],8);
-	state[1] = tmp1 ^ ROR(state[1],8) ^ ROR(tmp0,16);
-	state[0] = tmp0 ^ ROR(state[0],8) ^ ROR(tmp2,16);
+	uint32_t t0, t1, t2;
+	t0 = state[7] ^ ROR(state[7],8);
+	t2 = state[0] ^ ROR(state[0],8);
+	state[7] = t2 ^ ROR(state[7], 8) ^ ROR(t0, 16);
+	t1 = state[6] ^ ROR(state[6],8);
+	state[6] = t0 ^ t2 ^ ROR(state[6], 8) ^ ROR(t1,16);
+	t0 = state[5] ^ ROR(state[5],8);
+	state[5] = t1 ^ ROR(state[5],8) ^ ROR(t0,16);
+	t1 = state[4] ^ ROR(state[4],8);
+	state[4] = t0 ^ t2 ^ ROR(state[4],8) ^ ROR(t1,16);
+	t0 = state[3] ^ ROR(state[3],8);
+	state[3] = t1 ^ t2 ^ ROR(state[3],8) ^ ROR(t0,16);
+	t1 = state[2] ^ ROR(state[2],8);
+	state[2] = t0 ^ ROR(state[2],8) ^ ROR(t1,16);
+	t0 = state[1] ^ ROR(state[1],8);
+	state[1] = t1 ^ ROR(state[1],8) ^ ROR(t0,16);
+	state[0] = t0 ^ ROR(state[0],8) ^ ROR(t2,16);
 }
 
 /******************************************************************************
