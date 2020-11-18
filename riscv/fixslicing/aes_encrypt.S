@@ -248,89 +248,66 @@ ark_sbox:
 *       - a3 to contain 6
 ******************************************************************************/
 mixcolumns0:
-    byte_ror    t3,s0,t4,t5,a2,a3,s8,s9     // t3 <- BYTE_rori(state[0],x)
-    rori        t3, t3, 8, s8, s9           // t3 <- BYTE_rori(state[0],x) >>> 8
+    li          t6, 0x0f0f0f0f
+    byte_ror    t3,s0,t4,t5,a2,a3,s8,s9     // t3 <- BYTE_ROR_6(state[0])
+    rori        t3, t3, 8, s8, s9           // t3 <- BYTE_ROR_6(state[0]) >>> 8
     xor         t0, s0, t3                  // t0 <- state[0] ^ t3
-    byte_ror    t1,s7,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_rori(state[7],x)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(state[7],x) >>> 8
-    xor         t6, s7, t1                  // t6 <- state[7] ^ t1
-    xor         t6, t6, t0                  // t6 <- state[7] ^ t1 ^ t0
-    xor         s7, s7, t6                  // s7 <- t1 ^ t0
-    byte_ror    t1,t1,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_rori(t1,x)
-    rori        t1, t1, 8, s8, s9           // t1 <- t1 >>> 8
-    byte_ror    s10,t1,t4,t5,a2,a3,s8,s9    // s10 <- BYTE_rori(t1,x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(t1,x) >>> 8
-    xor         t1, t1, s10                 // t1 <- t1 ^ s10
-    xor         s7, s7, t1                  // s7 <- s7 ^ t1
-    byte_ror    t1,s6,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_rori(state[6],x)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(state[6],x) >>> 8
-    xor         t2, s6, t1                  // t2 <- state[6] ^ t1
-    xor         s6, t1, t6                  // s6 <- t1 ^ t6
-    byte_ror    t1,t1,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_rori(t1,x)
-    rori        t1, t1, 8, s8, s9           // t1 <- t1 >>> 8
-    byte_ror    s10,t1,t4,t5,a2,a3,s8,s9    // s10 <- BYTE_rori(t1,x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(t1,x) >>> 8
-    xor         t1, t1, s10                 // t1 <- t1 ^ s10
-    xor         s6, s6, t1                  // s6 <- s6 ^ t1
-    byte_ror    s10,s5,t4,t5,a2,a3,s8,s9    // s10 <- BYTE_rori(state[5],x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(state[5],x) >>> 8
-    xor         t1, s5, s10                 // t1 <- state[5] ^ s10
-    xor         s5, t2, s10                 // s5 <- t2 ^ s10
-    byte_ror    s10,s10,t4,t5,a2,a3,s8,s9   // s10 <- BYTE_rori(s10,x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(s10,x) >>> 8
-    byte_ror    t2,s10,t4,t5,a2,a3,s8,s9    // t2 <- BYTE_rori(s10,x)
-    rori        t2, t2, 8, s8, s9           // t2 <- BYTE_rori(s10,x) >>> 8
-    xor         t2, t2, s10                 // t2 <- t2 ^ s10
-    xor         s5, s5, t2                  // s5 <- t2
-    byte_ror    s10,s4,t4,t5,a2,a3,s8,s9    // s10 <- BYTE_rori(state[4],x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(state[4],x) >>> 8
-    xor         t2, s4, s10                 // t2 <- t2 ^ s10
-    xor         s4, t1, t0                  // s4 <- t1 ^ t0
-    xor         s4, s4, s10                 // s4 <- t1 ^ t0 ^ s10
-    byte_ror    s10,s10,t4,t5,a2,a3,s8,s9   // s10 <- BYTE_rori(s10,x)
-    rori        s10, s10, 8, s8, s9         // s10 <- s10 >>> 8
-    byte_ror    t1,s10,t4,t5,a2,a3,s8,s9    // t1 <- BYTE_rori(s10,x)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(s10,x) >>> 8
-    xor         t1, t1, s10                 // t1 <- t1 ^ s10
-    xor         s4, s4, t1                  // s4 <- s4 ^ t1
-    byte_ror    s10,s3,t4,t5,a2,a3,s8,s9    // s10 <- BYTE_rori(state[3],x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(state[3],x) >>> 8
-    xor         t1, s3, s10                 // t1 <- state[3] ^ s10
-    xor         s3, t0, t2                  // s3 <- t0 ^ t2
-    xor         s3, s3, s10                 // s3 <- t0 ^ t2 ^ s10
-    byte_ror    s10,s10,t4,t5,a2,a3,s8,s9   // s10 <- BYTE_rori(s10,x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(s10,x) >>> 8
-    byte_ror    t2,s10,t4,t5,a2,a3,s8,s9    // t2 <- BYTE_rori(s10,x)
-    rori        t2, t2, 8, s8, s9           // t2 <- BYTE_rori(s10,x) >>> 8
-    xor         t2, t2, s10                 // t2 <- t2 ^ s10
-    xor         s3, s3, t2                  // s3 <- s3 ^ t2
-    byte_ror    s10,s2,t4,t5,a2,a3,s8,s9    // s10 <- BYTE_rori(state[2],x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(state[2],x) >>> 8
-    xor         t2, s2, s10                 // t2 <- state[2] ^ s10
-    xor         s2, t1, s10                 // s2 <- state[2] ^ s10
-    byte_ror    s10,s10,t4,t5,a2,a3,s8,s9   // s10 <- BYTE_rori(s10,x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(s10,x) >>> 8
-    byte_ror    t1,s10,t4,t5,a2,a3,s8,s9    // t1 <- BYTE_rori(s10,x)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(s10,x) >>> 8
-    xor         t1, t1, s10                 // t1 <- t1 ^ s10
-    xor         s2, s2, t1                  // s2 <- s2 ^ t1
-    byte_ror    s10,s1,t4,t5,a2,a3,s8,s9    // s10 <- BYTE_rori(state[1],x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(state[1],x) >>> 8
-    xor         t1, s1, s10                 // t1 <- state[1] ^ s10
-    xor         s1, t2, s10                 // s1 <- t2 ^ s10
-    byte_ror    s10,s10,t4,t5,a2,a3,s8,s9   // s10 <- BYTE_rori(s10,x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(s10,x) >>> 8
-    byte_ror    t2,s10,t4,t5,a2,a3,s8,s9    // t2 <- BYTE_rori(s10,x)
-    rori        t2, t2, 8, s8, s9           // t2 <- BYTE_rori(s10,x) >>> 8
-    xor         t2, t2, s10                 // t2 <- t2 ^ s10
-    xor         s1, s1, t2                  // s1 <- s1 ^ t2
-    xor         s0, t1, t3                  // s0 <- t1 ^ t3
-    byte_ror    t3,t3,t4,t5,a2,a3,s8,s9     // t3 <- BYTE_rori(t3,x)
-    rori        t3, t3, 8, s8, s9           // t3 <- BYTE_rori(t3,x) >>> 8
-    byte_ror    s10,t3,t4,t5,a2,a3,s8,s9    // s10 <- BYTE_rori(t3,x)
-    rori        s10, s10, 8, s8, s9         // s10 <- BYTE_rori(t3,x) >>> 8
-    xor         t3, t3, s10                 // t3 <- t3 ^ s10
-    xor         s0, s0, t3                  // s0 <- s0 ^ t3
+    byte_ror    t1,s7,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_ROR_6(state[7])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_6(state[7]) >>> 8
+    xor         t2, s7, t1                  // t2 <- state[7] ^ t1
+    byte_rori   a1, t2, t6, t6, 4, s8, s9   // a1 <- BYTE_ROR_4(t2)
+    rori        a1, a1, 16, s8, s9          // a1 <- BYTE_ROR_4(t2) >>> 16
+    xor         s7, a1, t0                  // s7 <- a1 ^ t0
+    xor         s7, s7, t1                  // s7 <- a1 ^ t0 ^ t1
+    byte_ror    t1,s6,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_ROR_6(state[6])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_6(state[6]) >>> 8
+    xor         a1, t1, s6                  // a1 <- t1 ^ s6
+    byte_rori   a4, a1, t6, t6, 4, s8, s9   // a4 <- BYTE_ROR_4(a1)
+    rori        a4, a4, 16, s8, s9          // a4 <- BYTE_ROR_4(a1) >>> 16
+    xor         s6, t2, t0                  // s6 <- t2 ^ t0
+    xor         s6, s6, t1                  // s6 <- t2 ^ t0 ^ t1
+    xor         s6, s6, a4                  // s6 <- t2 ^ t0 ^ t1 ^ a4
+    byte_ror    t1,s5,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_ROR_6(state[5])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_6(state[5]) >>> 8
+    xor         t2, t1, s5                  // t2 <- t1 ^ state[5]
+    byte_rori   a4, t2, t6, t6, 4, s8, s9   // a4 <- BYTE_ROR_4(t2)
+    rori        a4, a4, 16, s8, s9          // a4 <- BYTE_ROR_4(t2) >>> 16
+    xor         s5, a1, t1                  // s5 <- a1 ^ t1
+    xor         s5, s5, a4                  // s5 <- a1 ^ t1 ^ a4
+    byte_ror    t1,s4,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_ROR_6(state[4])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_6(state[4]) >>> 8
+    xor         a1, t1, s4                  // a1 <- t1 ^ state[4]
+    byte_rori   a4, a1, t6, t6, 4, s8, s9   // a4 <- BYTE_ROR_4(a1)
+    rori        a4, a4, 16, s8, s9          // a4 <- BYTE_ROR_4(a1) >>> 16
+    xor         s4, t2, t0                  // s4 <- t2 ^ t0
+    xor         s4, s4, t1                  // s4 <- t2 ^ t0 ^ t1
+    xor         s4, s4, a4                  // s4 <- t2 ^ t0 ^ t1 ^ a4
+    byte_ror    t1,s3,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_ROR_6(state[3])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_6(state[3]) >>> 8
+    xor         t2, t1, s3                  // t2 <- t1 ^ state[3]
+    byte_rori   a4, t2, t6, t6, 4, s8, s9   // a4 <- BYTE_ROR_4(t2)
+    rori        a4, a4, 16, s8, s9          // a4 <- BYTE_ROR_4(t2) >>> 16
+    xor         s3, a1, t0                  // s3 <- a1 ^ t0
+    xor         s3, s3, t1                  // s3 <- a1 ^ t0 ^ t1
+    xor         s3, s3, a4                  // s3 <- a1 ^ t0 ^ t1 ^ a4
+    byte_ror    t1,s2,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_ROR_6(state[2])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_6(state[2]) >>> 8
+    xor         a1, t1, s2                  // a1 <- t1 ^ state[2]
+    byte_rori   a4, a1, t6, t6, 4, s8, s9   // a4 <- BYTE_ROR_4(a1)
+    rori        a4, a4, 16, s8, s9          // a4 <- BYTE_ROR_4(a1) >>> 16
+    xor         s2, t2, t1                  // s2 <- t2 ^ t1
+    xor         s2, s2, a4                  // s2 <- t2 ^ t1 ^ a4
+    byte_ror    t1,s1,t4,t5,a2,a3,s8,s9     // t1 <- BYTE_ROR_6(state[1])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_6(state[1]) >>> 8
+    xor         t2, t1, s1                  // t2 <- t1 ^ state[1]
+    byte_rori   a4, t2, t6, t6, 4, s8, s9   // a4 <- BYTE_ROR_4(t2)
+    rori        a4, a4, 16, s8, s9          // a4 <- BYTE_ROR_4(t2) >>> 16
+    xor         s1, a1, t1                  // s1 <- a1 ^ t1
+    xor         s1, s1, a4                  // s1 <- a1 ^ t1 ^ a4
+    byte_rori   t0, t0, t6, t6, 4, s8, s9   // t0 <- BYTE_ROR_4(t0)
+    rori        t0, t0, 16, s8, s9          // t0 <- BYTE_ROR_4(t0) >>> 16
+    xor         s0, t2, t3                  // s0 <- t2 ^ t3
+    xor         s0, s0, t0                  // s0 <- t2 ^ t3 ^ t0
     ret
 
 /******************************************************************************
