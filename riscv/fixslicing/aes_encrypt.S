@@ -233,7 +233,7 @@ ark_sbox:
 
 /******************************************************************************
 * Computation of the MixColumns transformation in the fixsliced representation.
-* Note that it can be used for rounds i s.t. i % 4 == 0 || i % 4 == 2.
+* Note that it can be used for rounds i s.t. i % 4 == 0 or i % 4 == 2.
 *
 * Requirements:
 *   - for i % 4 == 0:
