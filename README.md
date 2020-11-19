@@ -45,11 +45,11 @@ Since the fixsliced representations require 4 times less RAM to store all the ro
 
 | Algorithm                | Parallel blocks | ARM Cortex-M3 | E31 RISC-V core       |
 |:-------------------------|:---------------:|:-------------:|:---------------------:|
-| AES-128 semi-fixsliced   | 2               | 89.9          | 104.3                 |
-| AES-128 fully-fixsliced  | 2               | 87.1          | 100.3                 |
+| AES-128 semi-fixsliced   | 2               | 87.1          | 93.4                  |
+| AES-128 fully-fixsliced  | 2               | 84.3          | 89.3                  |
 | AES-128 barrel-shiftrows | 8               | 94.8          | 78.9                  |
-| AES-256 semi-fixsliced   | 2               | 123.8         | 144.1                 |
-| AES-256 fully-fixsliced  | 2               | 119.5         | 137.8                 |
+| AES-256 semi-fixsliced   | 2               | 119.9         | 128.4                 |
+| AES-256 fully-fixsliced  | 2               | 115.6         | 122.4                 |
 | AES-256 barrel-shiftrows | 8               | 127.9         | 105.7                 |
 
 ## First-order masking
