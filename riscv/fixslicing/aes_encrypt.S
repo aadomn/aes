@@ -316,50 +316,50 @@ mixcolumns0:
 ******************************************************************************/
 mixcolumns1:
     li          t5, 0x0f0f0f0f              // mask for byte_rori
-    byte_rori   t0, s0, t5, t5, 4, s8, s9   // t0 <- BYTE_rori(state[0],4)
-    rori        a2, t0, 8, s8, s9           // a2 <- BYTE_rori(state[0],4) >>> 8
+    byte_rori   t0, s0, t5, t5, 4, s8, s9   // t0 <- BYTE_ROR_4(state[0])
+    rori        a2, t0, 8, s8, s9           // a2 <- BYTE_ROR_4(state[0]) >>> 8
     xor         t0, a2, s0                  // t0 <- state[0] ^ a2
-    byte_rori   t1, s7, t5, t5, 4, s8, s9   // t1 <- BYTE_rori(state[7],4)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(state[7],4) >>> 8
+    byte_rori   t1, s7, t5, t5, 4, s8, s9   // t1 <- BYTE_ROR_4(state[7])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_4(state[7]) >>> 8
     xor         t1, t1, s7                  // t1 <- state[7] ^ t1
     xor         t3, t1, t0                  // t3 <- t1 ^ t0
     rori        t4, t1, 16, s8, s9          // t4 <- t1 >>> 16
     xor         s7, s7, t3                  // s7 <- s7 ^ t1 ^ t0
     xor         s7, s7, t4                  // s7 <- s7 ^ t1 ^ t0 ^ (t1 >>> 16)
-    byte_rori   t1, s6, t5, t5, 4, s8, s9   // t1 <- BYTE_rori(state[6],4)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(state[6],4) >>> 8
+    byte_rori   t1, s6, t5, t5, 4, s8, s9   // t1 <- BYTE_ROR_4(state[6])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_4(state[6]) >>> 8
     xor         t2, s6, t1                  // t2 <- state[6] ^ t1
     xor         s6, t3, t1                  // s6 <- t3 ^ t1
     rori        t4, t2, 16, s8, s9          // t4 <- t2 >>> 16
     xor         s6, s6, t4                  // s6 <- s6 ^ (t2 >>> 16)
-    byte_rori   t1, s5, t5, t5, 4, s8, s9   // t1 <- BYTE_rori(state[5],4)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(state[5],4) >>> 8
+    byte_rori   t1, s5, t5, t5, 4, s8, s9   // t1 <- BYTE_ROR_4(state[5])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_4(state[5]) >>> 8
     xor         t3, s5, t1                  // t3 <- state[5] ^ t1
     xor         s5, t2, t1                  // s5 <- t2 ^ t1
     rori        t4, t3, 16, s8, s9          // t4 <- t3 >>> 16
     xor         s5, s5, t4                  // s5 <- s5 ^ (t3 >>> 16)
-    byte_rori   t1, s4, t5, t5, 4, s8, s9   // t1 <- BYTE_rori(state[4],4)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(state[4],4) >>> 8
+    byte_rori   t1, s4, t5, t5, 4, s8, s9   // t1 <- BYTE_ROR_4(state[4])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_4(state[4]) >>> 8
     xor         t2, s4, t1                  // t2 <- state[4] ^ t1
     xor         s4, t3, t1                  // s4 <- t3 ^ t1
     xor         s4, s4, t0                  // s4 <- t3 ^ t1 ^ t0
     rori        t4, t2, 16, s8, s9          // t4 <- t2 >>> 16
     xor         s4, s4, t4                  // s4 <- s4 ^ (t2 >>> 16)
-    byte_rori   t1, s3, t5, t5, 4, s8, s9   // t1 <- BYTE_rori(state[3],4)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(state[3],4) >>> 8
+    byte_rori   t1, s3, t5, t5, 4, s8, s9   // t1 <- BYTE_ROR_4(state[3])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_4(state[3]) >>> 8
     xor         t3, s3, t1                  // t3 <- state[3] ^ t1
     xor         s3, t2, t1                  // s3 <- t2 ^ t1
     xor         s3, s3, t0                  // s3 <- t2 ^ t1 ^ t0
     rori        t4, t3, 16, s8, s9          // t4 <- t3 >>> 16
     xor         s3, s3, t4                  // s3 <- s3 ^ (t3 >>> 16)
-    byte_rori   t1, s2, t5, t5, 4, s8, s9   // t1 <- BYTE_rori(state[2],4)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(state[2],4) >>> 8
+    byte_rori   t1, s2, t5, t5, 4, s8, s9   // t1 <- BYTE_ROR_4(state[2])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_4(state[2]) >>> 8
     xor         t2, s2, t1                  // t2 <- state[2] ^ t1
     xor         s2, t3, t1                  // s2 <- t3 ^ t1
     rori        t4, t2, 16, s8, s9          // t4 <- t2 >>> 16
     xor         s2, s2, t4                  // s2 <- s2 ^ (t2 >>> 16)
-    byte_rori   t1, s1, t5, t5, 4, s8, s9   // t1 <- BYTE_rori(state[1],4)
-    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_rori(state[1],4) >>> 8
+    byte_rori   t1, s1, t5, t5, 4, s8, s9   // t1 <- BYTE_ROR_4(state[1])
+    rori        t1, t1, 8, s8, s9           // t1 <- BYTE_ROR_4(state[1]) >>> 8
     xor         t3, s1, t1                  // t3 <- state[1] ^ t1
     xor         s1, t2, t1                  // s1 <- t2 ^ t1
     rori        t4, t3, 16, s8, s9          // t4 <- t3 >>> 16
