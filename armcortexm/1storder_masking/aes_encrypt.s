@@ -1005,8 +1005,14 @@ double_shiftrows:
 aes128_encrypt_ffs:
     push    {r0-r12,r14}
     sub.w   sp, #136
-    ldm     r2, {r4-r7}             // load the 1st 128-bit blocks in r4-r7
-    ldm     r3, {r8-r11}            // load the 2nd 128-bit blocks in r8-r11
+    ldr.w   r4, [r2]                // load the 1st 128-bit blocks in r4-r7
+    ldr     r5, [r2, #4]
+    ldr     r6, [r2, #8]
+    ldr     r7, [r2, #12]
+    ldr.w   r8, [r3]                // load the 2nd 128-bit blocks in r8-r11
+    ldr     r9, [r3, #4]
+    ldr     r10,[r3, #8]
+    ldr     r11,[r3, #12]
     bl      packing
     // ------------------ MASKING ------------------
     // generation of 1 random word
@@ -1119,8 +1125,14 @@ aes128_ffs_get_random_mask:
 aes128_encrypt_sfs:
     push    {r0-r12,r14}
     sub.w   sp, #136
-    ldm     r2, {r4-r7}             // load the 1st 128-bit blocks in r4-r7
-    ldm     r3, {r8-r11}            // load the 2nd 128-bit blocks in r8-r11
+    ldr.w   r4, [r2]                // load the 1st 128-bit blocks in r4-r7
+    ldr     r5, [r2, #4]
+    ldr     r6, [r2, #8]
+    ldr     r7, [r2, #12]
+    ldr.w   r8, [r3]                // load the 2nd 128-bit blocks in r8-r11
+    ldr     r9, [r3, #4]
+    ldr     r10,[r3, #8]
+    ldr     r11,[r3, #12]
     bl      packing
     // ------------------ MASKING ------------------
     // generation of 1 random word

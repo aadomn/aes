@@ -318,7 +318,10 @@ inv_shiftrows_3:
 .align 2
 aes128_keyschedule_ffs_lut:
     push    {r1-r12,r14}
-    ldm     r1, {r4-r7}                 // load the encryption key
+    ldr.w   r4, [r1]                    // load the encryption key
+    ldr     r5, [r1, #4]
+    ldr     r6, [r1, #8]
+    ldr     r7, [r1, #12]
     adr     r3, AES_Sbox_compact        // load the sbox LUT address in r3
     movw    r2, #0x01                   // 1st const
     bl      aes128_keyschedule_rfunc    // 1st round
@@ -387,7 +390,10 @@ aes128_keyschedule_ffs_lut:
     bl      inv_shiftrows_1
     bl      packing_rkey
     ldr     r12, [sp]
-    ldm     r12, {r4-r7}
+    ldr.w   r4, [r12]                    // load the encryption key
+    ldr     r5, [r12, #4]
+    ldr     r6, [r12, #8]
+    ldr     r7, [r12, #12]
     mov     r8, r4
     mov     r9, r5
     mov     r10, r6
@@ -415,7 +421,10 @@ aes128_keyschedule_ffs_lut:
 .align 2
 aes256_keyschedule_ffs_lut:
     push    {r0-r12,r14}
-    ldm     r1, {r4-r11}                // load the encryption key
+    ldr.w   r4, [r1]                    // load the encryption key
+    ldr     r5, [r1, #4]
+    ldr     r6, [r1, #8]
+    ldr     r7, [r1, #12]
     adr     r3, AES_Sbox_compact        // load the sbox LUT address in r3
     movw    r2, #0x01                   // 1st const
     bl      aes256_keyschedule_rfunc_0  // 1st round
@@ -498,11 +507,17 @@ aes256_keyschedule_ffs_lut:
     bl      packing_rkey
     ldr     r12, [sp, #4]!
     add.w   r12, #16
-    ldm     r12, {r4-r7}
+    ldr.w   r4, [r12]
+    ldr     r5, [r12, #4]
+    ldr     r6, [r12, #8]
+    ldr     r7, [r12, #12]
     bl      inv_shiftrows_1
     bl      packing_rkey
     ldr     r12, [sp]
-    ldm     r12, {r4-r7}
+    ldr.w   r4, [r12]                    // load the encryption key
+    ldr     r5, [r12, #4]
+    ldr     r6, [r12, #8]
+    ldr     r7, [r12, #12]
     mov     r8, r4
     mov     r9, r5
     mov     r10, r6
@@ -530,7 +545,10 @@ aes256_keyschedule_ffs_lut:
 .align 2
 aes128_keyschedule_sfs_lut:
     push    {r1-r12,r14}
-    ldm     r1, {r4-r7}                 // load the encryption key
+    ldr.w   r4, [r1]                    // load the encryption key
+    ldr     r5, [r1, #4]
+    ldr     r6, [r1, #8]
+    ldr     r7, [r1, #12]
     adr     r3, AES_Sbox_compact        // load the sbox LUT address in r3
     movw    r2, #0x01                   // 1st const
     bl      aes128_keyschedule_rfunc    // 1st round
@@ -605,7 +623,10 @@ aes128_keyschedule_sfs_lut:
     bl      inv_shiftrows_1
     bl      packing_rkey
     ldr     r12, [sp]
-    ldm     r12, {r4-r7}
+    ldr.w   r4, [r12]                    // load the encryption key
+    ldr     r5, [r12, #4]
+    ldr     r6, [r12, #8]
+    ldr     r7, [r12, #12]
     mov     r8, r4
     mov     r9, r5
     mov     r10, r6
@@ -633,7 +654,10 @@ aes128_keyschedule_sfs_lut:
 .align 2
 aes256_keyschedule_sfs_lut:
     push    {r0-r12,r14}
-    ldm     r1, {r4-r11}                // load the encryption key
+    ldr.w   r4, [r1]                    // load the encryption key
+    ldr     r5, [r1, #4]
+    ldr     r6, [r1, #8]
+    ldr     r7, [r1, #12]
     adr     r3, AES_Sbox_compact        // load the sbox LUT address in r3
     movw    r2, #0x01                   // 1st const
     bl      aes256_keyschedule_rfunc_0  // 1st round
@@ -725,11 +749,17 @@ aes256_keyschedule_sfs_lut:
     bl      packing_rkey
     ldr     r12, [sp, #4]!
     add.w   r12, #16
-    ldm     r12, {r4-r7}
+    ldr.w   r4, [r12]
+    ldr     r5, [r12, #4]
+    ldr     r6, [r12, #8]
+    ldr     r7, [r12, #12]
     bl      inv_shiftrows_1
     bl      packing_rkey
     ldr     r12, [sp]
-    ldm     r12, {r4-r7}
+    ldr.w   r4, [r12]                    // load the encryption key
+    ldr     r5, [r12, #4]
+    ldr     r6, [r12, #8]
+    ldr     r7, [r12, #12]
     mov     r8, r4
     mov     r9, r5
     mov     r10, r6

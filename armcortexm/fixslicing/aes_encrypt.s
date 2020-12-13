@@ -476,8 +476,14 @@ double_shiftrows:
 aes128_encrypt_ffs:
     push    {r0-r12,r14}
     sub.w   sp, #56                 // allow space on the stack for tmp var
-    ldm     r2, {r4-r7}             // load the 1st 128-bit blocks in r4-r7
-    ldm     r3, {r8-r11}            // load the 2nd 128-bit blocks in r8-r11
+    ldr.w   r4, [r2]                // load the 1st 128-bit blocks in r4-r7
+    ldr     r5, [r2, #4]
+    ldr     r6, [r2, #8]
+    ldr     r7, [r2, #12]
+    ldr.w   r8, [r3]                // load the 2nd 128-bit blocks in r8-r11
+    ldr     r9, [r3, #4]
+    ldr     r10,[r3, #8]
+    ldr     r11,[r3, #12]
     ldr.w   r1, [sp, #112]          // load 'rkey' argument from the stack
     str.w   r1, [sp, #48]           // store it there for 'add_round_key'
     bl      packing                 // pack the 2 input blocks
@@ -515,8 +521,14 @@ aes128_encrypt_ffs:
     bl      unpacking               // unpack the internal state
     ldrd    r0, r1, [sp, #56]       // restore the addr to store the ciphertext
     add.w   sp, #64                 // restore the stack pointer
-    stm     r0, {r4-r7}             // store the ciphertext
-    stm     r1, {r8-r11}            // store the ciphertext
+    str.w   r4, [r0]                // store the ciphertext
+    str     r5, [r0, #4]
+    str     r6, [r0, #8]
+    str     r7, [r0, #12]
+    str.w   r8, [r1]                // store the ciphertext
+    str     r9, [r1, #4]
+    str     r10,[r1, #8]
+    str     r11,[r1, #12]
     pop     {r2-r12, r14}           // restore context
     bx      lr
 
@@ -536,8 +548,14 @@ aes128_encrypt_ffs:
 aes256_encrypt_ffs:
     push    {r0-r12,r14}
     sub.w   sp, #56                 // allow space on the stack for tmp var
-    ldm     r2, {r4-r7}             // load the 1st 128-bit blocks in r4-r7
-    ldm     r3, {r8-r11}            // load the 2nd 128-bit blocks in r8-r11
+    ldr.w   r4, [r2]                // load the 1st 128-bit blocks in r4-r7
+    ldr     r5, [r2, #4]
+    ldr     r6, [r2, #8]
+    ldr     r7, [r2, #12]
+    ldr.w   r8, [r3]                // load the 2nd 128-bit blocks in r8-r11
+    ldr     r9, [r3, #4]
+    ldr     r10,[r3, #8]
+    ldr     r11,[r3, #12]
     ldr.w   r1, [sp, #112]          // load 'rkey' argument from the stack
     str.w   r1, [sp, #48]           // store it there for 'add_round_key'
     bl      packing                 // pack the 2 input blocks
@@ -583,8 +601,14 @@ aes256_encrypt_ffs:
     bl      unpacking               // unpack the internal state
     ldrd    r0, r1, [sp, #56]       // restore the addr to store the ciphertext
     add.w   sp, #64                 // restore the stack pointer
-    stm     r0, {r4-r7}             // store the ciphertext
-    stm     r1, {r8-r11}            // store the ciphertext
+    str.w   r4, [r0]                // store the ciphertext
+    str     r5, [r0, #4]
+    str     r6, [r0, #8]
+    str     r7, [r0, #12]
+    str.w   r8, [r1]                // store the ciphertext
+    str     r9, [r1, #4]
+    str     r10,[r1, #8]
+    str     r11,[r1, #12]
     pop     {r2-r12, r14}           // restore context
     bx      lr
 
@@ -604,8 +628,14 @@ aes256_encrypt_ffs:
 aes128_encrypt_sfs:
     push    {r0-r12,r14}
     sub.w   sp, #56                 // allow space on the stack for tmp var
-    ldm     r2, {r4-r7}             // load the 1st 128-bit blocks in r4-r7
-    ldm     r3, {r8-r11}            // load the 2nd 128-bit blocks in r8-r11
+    ldr.w   r4, [r2]                // load the 1st 128-bit blocks in r4-r7
+    ldr     r5, [r2, #4]
+    ldr     r6, [r2, #8]
+    ldr     r7, [r2, #12]
+    ldr.w   r8, [r3]                // load the 2nd 128-bit blocks in r8-r11
+    ldr     r9, [r3, #4]
+    ldr     r10,[r3, #8]
+    ldr     r11,[r3, #12]
     ldr.w   r1, [sp, #112]          // load 'rkey' argument from the stack
     str.w   r1, [sp, #48]           // store it there for 'add_round_key'
     bl      packing                 // pack the 2 input blocks
@@ -647,8 +677,14 @@ aes128_encrypt_sfs:
     bl      unpacking               // unpack the internal state
     ldrd    r0, r1, [sp, #56]       // restore the addr to store the ciphertext
     add.w   sp, #64                 // restore the stack pointer
-    stm     r0, {r4-r7}             // store the ciphertext
-    stm     r1, {r8-r11}            // store the ciphertext
+    str.w   r4, [r0]                // store the ciphertext
+    str     r5, [r0, #4]
+    str     r6, [r0, #8]
+    str     r7, [r0, #12]
+    str.w   r8, [r1]                // store the ciphertext
+    str     r9, [r1, #4]
+    str     r10,[r1, #8]
+    str     r11,[r1, #12]
     pop     {r2-r12, r14}           // restore context
     bx      lr
 
@@ -668,8 +704,14 @@ aes128_encrypt_sfs:
 aes256_encrypt_sfs:
     push    {r0-r12,r14}
     sub.w   sp, #56                 // allow space on the stack for tmp var
-    ldm     r2, {r4-r7}             // load the 1st 128-bit blocks in r4-r7
-    ldm     r3, {r8-r11}            // load the 2nd 128-bit blocks in r8-r11
+    ldr.w   r4, [r2]                // load the 1st 128-bit blocks in r4-r7
+    ldr     r5, [r2, #4]
+    ldr     r6, [r2, #8]
+    ldr     r7, [r2, #12]
+    ldr.w   r8, [r3]                // load the 2nd 128-bit blocks in r8-r11
+    ldr     r9, [r3, #4]
+    ldr     r10,[r3, #8]
+    ldr     r11,[r3, #12]
     ldr.w   r1, [sp, #112]          // load 'rkey' argument from the stack
     str.w   r1, [sp, #48]           // store it there for 'add_round_key'
     bl      packing                 // pack the 2 input blocks
@@ -721,7 +763,13 @@ aes256_encrypt_sfs:
     bl      unpacking               // unpack the internal state
     ldrd    r0, r1, [sp, #56]       // restore the addr to store the ciphertext
     add.w   sp, #64                 // restore the stack pointer
-    stm     r0, {r4-r7}             // store the ciphertext
-    stm     r1, {r8-r11}            // store the ciphertext
+    str.w   r4, [r0]                // store the ciphertext
+    str     r5, [r0, #4]
+    str     r6, [r0, #8]
+    str     r7, [r0, #12]
+    str.w   r8, [r1]                // store the ciphertext
+    str     r9, [r1, #4]
+    str     r10,[r1, #8]
+    str     r11,[r1, #12]
     pop     {r2-r12, r14}           // restore context
     bx      lr

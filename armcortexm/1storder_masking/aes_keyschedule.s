@@ -1470,8 +1470,14 @@ xor_columns_3:
 .align 2
 aes128_keyschedule_ffs:
     push    {r0-r12,r14}
-    ldm     r1, {r4-r7}             // load the 128-bit key in r4-r7
-    ldm     r1, {r8-r11}            // load the 128-bit key in r8-r11
+    ldr.w   r4, [r1]                // load the 128-bit key in r4-r7
+    ldr     r5, [r1, #4]
+    ldr     r6, [r1, #8]
+    ldr     r7, [r1, #12]
+    ldr.w   r8, [r1]                // load the 128-bit key in r8-r11
+    ldr     r9, [r1, #4]
+    ldr     r10,[r1, #8]
+    ldr     r11,[r1, #12]
     bl      packing                 // pack the master key
     // ------------------ MASKING ------------------
     // generation of 2 random words
@@ -1596,8 +1602,14 @@ ffs_get_random_mask:
 .align 2
 aes128_keyschedule_sfs:
     push    {r0-r12,r14}
-    ldm     r1, {r4-r7}             // load the 128-bit key in r4-r7
-    ldm     r1, {r8-r11}            // load the 128-bit key in r8-r11
+    ldr.w   r4, [r1]                // load the 128-bit key in r4-r7
+    ldr     r5, [r1, #4]
+    ldr     r6, [r1, #8]
+    ldr     r7, [r1, #12]
+    ldr.w   r8, [r1]                // load the 128-bit key in r8-r11
+    ldr     r9, [r1, #4]
+    ldr     r10,[r1, #8]
+    ldr     r11,[r1, #12]
     bl      packing                 // pack the master key
 
     // ------------------ MASKING ------------------
